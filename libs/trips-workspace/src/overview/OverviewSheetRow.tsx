@@ -44,6 +44,7 @@ function GapRow(
         <Badge variant="outline">{props.labels.sheet.gap}</Badge>
       </TableCell>
       <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="text-muted-foreground">—</TableCell>
     </TableRow>
   );
 }
@@ -157,11 +158,14 @@ function JourneyRow(
     item: Extract<ProjectedRouteSource, { state: 'resolved'; reference: { kind: 'journey' } }>;
   }
 ): JSX.Element {
+  const name = props.item.source.name;
   return (
     <OverviewSheetSourceRow
       props={props}
       source={props.item.reference}
-      title={props.item.source.name || props.labels.source('journey', props.item.source.id)}
+      title={
+        name && name.trim().length > 0 ? name : props.labels.source('journey', props.item.source.id)
+      }
       when={props.labels.sheet.unknownDate}
       statuses={[]}
     />

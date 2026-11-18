@@ -64,7 +64,10 @@ it('observes People cache updates and refreshes independent Capture facts throug
     captureSource([sourceCapture({ tripId: 7, title: 'Original capture' })])
   );
   const { cache, client } = mountOverview(responses);
-  await screen.findByText('Coffee');
+  const unassociated = await screen.findByRole('region', { name: 'Unassociated' });
+  const people = await screen.findByRole('region', { name: 'workspace.peopleOnTrip' });
+  expect(await within(unassociated).findByText('Coffee')).toBeVisible();
+  expect(within(people).getByText('Coffee')).toBeVisible();
   await screen.findByText('Original capture');
   expect(cache.getQueryData([...captureQueryKey({ tripId: 7, client }), 'overview'])).toEqual(
     captureSource([sourceCapture({ tripId: 7, title: 'Original capture' })])
@@ -84,9 +87,11 @@ it('observes People cache updates and refreshes independent Capture facts throug
   await act(() =>
     cache.invalidateQueries({ queryKey: captureQueryKey({ tripId: 7, client }).slice(0, 3) })
   );
-  expect(await screen.findByText('Changed meeting')).toBeVisible();
+  expect(await within(unassociated).findByText('Changed meeting')).toBeVisible();
+  expect(await within(people).findByText('Changed meeting')).toBeVisible();
   expect(await screen.findByText('Changed capture')).toBeVisible();
-  expect(screen.queryByText('Coffee')).not.toBeInTheDocument();
+  expect(within(unassociated).queryByText('Coffee')).not.toBeInTheDocument();
+  expect(within(people).queryByText('Coffee')).not.toBeInTheDocument();
   expect(screen.queryByText('Original capture')).not.toBeInTheDocument();
 });
 
@@ -98,12 +103,15 @@ it('retains cached Capture facts and readable meeting facts during a failed refr
     captureSource([sourceCapture({ tripId: 7, title: 'Retained capture' })])
   );
   const { cache, client } = mountOverview(responses);
+  const unassociated = await screen.findByRole('region', { name: 'Unassociated' });
+  const people = await screen.findByRole('region', { name: 'workspace.peopleOnTrip' });
   await screen.findByText('Retained capture');
   responses.delete('/trips/7/capture-workspace');
   await act(() => cache.invalidateQueries({ queryKey: captureQueryKey({ tripId: 7, client }) }));
   expect(await screen.findByText('trips.source.unavailable')).toBeVisible();
   expect(screen.getByText('Retained capture')).toBeVisible();
-  expect(screen.getByText('Coffee')).toBeVisible();
+  expect(within(unassociated).getByText('Coffee')).toBeVisible();
+  expect(within(people).getByText('Coffee')).toBeVisible();
   responses.set(
     '/trips/7/capture-workspace',
     captureSource([sourceCapture({ tripId: 7, title: 'Recovered capture' })])

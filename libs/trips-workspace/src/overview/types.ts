@@ -110,6 +110,7 @@ export interface OverviewLabels {
     onRoute: string;
     gap: string;
   };
+  responsibility: ResponsibilityLabels;
   sleepPlan: {
     title: string;
     stopCount: (count: number) => string;
@@ -171,4 +172,5 @@ export type OverviewViewProps = TripOverviewProps & {
   workspaceDisplay?: OverviewDisplay;
   workspaceFilter?: OverviewFilter;
   workspaceQuery?: string;
+  workspaceContactNames?: ReadonlyMap<string, string>;
 };

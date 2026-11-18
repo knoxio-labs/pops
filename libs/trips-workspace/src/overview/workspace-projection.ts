@@ -2,6 +2,7 @@ import { accommodationCoverage } from '../visit/coverage';
 import { contextRecords } from './ContextSources';
 import { visitFacts } from './model';
 import { resolvedJourney, resolvedVisit } from './route-context';
+import { sourceContactName } from './workspace-people-model';
 
 import type { ProjectedRouteItem } from '../route/projection';
 import type { Visit } from '../stay/types';
@@ -144,6 +145,7 @@ function searchableText(item: ProjectedRouteItem, props: OverviewViewProps): str
         stay.status,
         stay.address,
         ...stay.hostLinks.flatMap((link) => [link.label, link.uri]),
+        sourceContactName(props, { kind: 'stay', id: stay.id }),
       ]),
       ...events.flatMap((event) => [
         event.name,
@@ -153,21 +155,37 @@ function searchableText(item: ProjectedRouteItem, props: OverviewViewProps): str
         event.intention,
         event.arrangement,
         event.purchase,
+        sourceContactName(props, { kind: 'event', id: event.id }),
       ]),
-      ...context.flatMap(contextSearchableText),
-      ...rentals.flatMap((rental) => [rental.provider, rental.status]),
+      ...context.flatMap((record) => contextSearchableText(record, props)),
+      ...rentals.flatMap((rental) => [
+        rental.provider,
+        rental.status,
+        sourceContactName(props, { kind: 'rental', id: rental.id }),
+      ]),
     ].filter((value): value is string => Boolean(value));
   }
   const journey = item.source;
-  return [journey.name, journey.reference, journey.notes].filter((value): value is string =>
-    Boolean(value)
-  );
+  return [
+    journey.name,
+    journey.reference,
+    journey.notes,
+    sourceContactName(props, { kind: 'journey', id: journey.id }),
+  ].filter((value): value is string => Boolean(value));
 }
 
-function contextSearchableText(record: OverviewContextRecord): (string | null | undefined)[] {
+function contextSearchableText(
+  record: OverviewContextRecord,
+  props: OverviewViewProps
+): (string | null | undefined)[] {
   switch (record.kind) {
     case 'meeting':
-      return [record.source.title, record.source.contactUri, record.source.notes];
+      return [
+        record.source.title,
+        record.source.contactUri,
+        sourceContactName(props, { kind: 'meeting', id: record.source.id }),
+        record.source.notes,
+      ];
     case 'capture':
       return [record.source.title, record.source.originalText, record.source.originalUrl];
     case 'idea':

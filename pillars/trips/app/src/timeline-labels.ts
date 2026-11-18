@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
+import { useArrangementLabels } from './arrangements/use-arrangement-labels';
+
 import type { OverviewLabels } from '@pops/trips-workspace';
 
 /** Translate Timeline controls and exact source labels through the owning host catalogue. */
 export function useOverviewLabels(): OverviewLabels {
   const { t } = useTranslation('trips');
+  const arrangementLabels = useArrangementLabels();
   return {
     trip: t('trip'),
     route: t('overview.route'),
@@ -40,6 +43,7 @@ export function useOverviewLabels(): OverviewLabels {
       onRoute: t('overview.sheet.onRoute'),
       gap: t('overview.sheet.gap'),
     },
+    responsibility: arrangementLabels,
     sleepPlan: {
       title: t('overview.sleepPlan.title'),
       stopCount: (count) => t('overview.sleepPlan.stopCount', { count }),

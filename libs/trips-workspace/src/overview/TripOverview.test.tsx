@@ -4,10 +4,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { captureSource } from '../capture/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
+import { meetingPlan } from '../people/test-utils';
 import { routeRead } from '../route/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview as mount } from './render.test-utils';
 import { overviewResponses, overviewTrip } from './test-utils';
+
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
 afterEach(cleanup);
 
@@ -52,6 +55,69 @@ describe('source-backed TripOverview', () => {
     expect(event).toHaveAttribute('data-route-kind', 'event');
     expect(event).toHaveTextContent('Alternative');
     expect(event).toHaveTextContent('Booked');
+  });
+
+  it('shows assigned people in the Sheet and searchable trip sidebar without exposing Contact URIs', async () => {
+    const responses = overviewResponses();
+    const uri = 'pops:contacts/contact/owner-issued';
+    responses.set('/trips/7/responsibilities', {
+      responsibilities: [
+        {
+          tripId: 7,
+          targetKind: 'stay',
+          targetId: 13,
+          responsibility: { kind: 'contact', uri },
+          revision: 1,
+        },
+        {
+          tripId: 7,
+          targetKind: 'event',
+          targetId: 61,
+          responsibility: { kind: 'self' },
+          revision: 2,
+        },
+      ],
+    });
+    responses.set('/trips/7/meeting-plans', {
+      meetingPlans: [meetingPlan({ contactUri: uri, visitId: 31, title: 'Dinner with Clara' })],
+    });
+    const contacts: ContactsHostCapability = {
+      createIntent: () => ({ Chooser: () => null }),
+      readContactReference: async (reference) => ({
+        status: 'available',
+        name: 'Clara Silva',
+        href: '/contacts/1',
+        reference: { canonicalId: '1', uri: reference },
+      }),
+    };
+    mount(responses, undefined, {
+      responsibility: { labels: overviewLabels.responsibility, contacts },
+    });
+
+    const table = await screen.findByRole('table', { name: 'Sheet' });
+    const stay = within(table).getByRole('row', { name: /Cedar guesthouse/ });
+    expect(await within(stay).findByRole('link', { name: 'Clara Silva' })).toBeVisible();
+    expect(within(table).getByRole('row', { name: /Harbour festival/ })).toHaveTextContent('You');
+    expect(within(table).getByRole('columnheader', { name: 'With' })).toBeVisible();
+    const people = screen.getByRole('region', { name: 'workspace.peopleOnTrip' });
+    expect(within(people).getByRole('link', { name: 'Clara Silva' })).toBeVisible();
+    expect(within(people).getByText(/Wellington · Dinner with Clara/)).toBeVisible();
+    expect(screen.queryByText(uri)).not.toBeInTheDocument();
+
+    const search = screen.getByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Clara Silva');
+    expect(await within(table).findByRole('row', { name: /Wellington/ })).toBeVisible();
+  });
+
+  it('does not present an unavailable responsibility read as an unassigned source', async () => {
+    const responses = overviewResponses();
+    responses.delete('/trips/7/responsibilities');
+    mount(responses);
+
+    const table = await screen.findByRole('table', { name: 'Sheet' });
+    const stay = within(table).getByRole('row', { name: /Cedar guesthouse/ });
+    expect(within(stay).getByText('workspace.responsibilityUnavailable')).toBeVisible();
+    expect(within(stay).queryByText('Not assigned')).not.toBeInTheDocument();
   });
 
   it('keeps an explicit structural route gap visible in both presentations', async () => {
