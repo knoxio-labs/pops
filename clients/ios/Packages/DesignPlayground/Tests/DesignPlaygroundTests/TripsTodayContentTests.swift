@@ -20,6 +20,30 @@ internal struct TripsTodayContentTests {
         #expect(inspected.findAll(TripsTodayNeedsYouView.self).isEmpty)
     }
 
+    @Test("loaded route chapters and gaps open the matching Plan target")
+    internal func loadedRouteActionsOpenPlanTargets() throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        let visit = try #require(snapshot.visits.first)
+        let route = TripRouteSnapshot(
+            tripId: snapshot.trip.id, revision: 1,
+            order: [.gap(999), .visit(visit.id)], paths: [], missingSources: [])
+        let date = try #require(TripClock.instant(local: "2026-01-01T12:00", zone: "UTC"))
+        var selectedVisitIDs: [Int?] = []
+        let inspected = try TripsTodayContent(
+            snapshot: snapshot, date: date, route: route,
+            selectPlanVisit: { selectedVisitIDs.append($0) }
+        )
+        .environment(\.timeZone, .gmt)
+        .inspect()
+
+        #expect(inspected.findAll(TripsChapterRail.self).count == 1)
+        #expect(inspected.findAll(TripsTodayNeedsYouView.self).count == 1)
+        try inspected.find(TripsChapterRail.self).find(ViewType.Button.self).tap()
+        #expect(selectedVisitIDs == [visit.id])
+        try inspected.find(TripsTodayNeedsYouView.self).find(ViewType.Button.self).tap()
+        #expect(selectedVisitIDs == [visit.id, nil])
+    }
+
     @Test("Today promotes the first future source and excludes it from the four later rows")
     internal func nextFocusDoesNotRepeat() throws {
         let original = try TripNavigationTestContext.snapshot()
@@ -51,6 +75,31 @@ internal struct TripsTodayContentTests {
         #expect((1...4).allSatisfy { upcoming.contains("Future \($0)") })
         #expect(!upcoming.contains("Future 0"))
         #expect(!upcoming.contains("Future 5"))
+    }
+
+    @Test("Now and Next remain distinct when the upcoming focus is summarized")
+    internal func nextFocusDoesNotRepeatAlongsideNow() throws {
+        let original = try TripNavigationTestContext.snapshot()
+        let currentStay = try #require(original.stays.first { $0.id == 1 })
+        let event = plannedEvent(
+            100, name: "Tomorrow appointment", day: "2026-01-03", time: "09:00")
+        let snapshot = TripSnapshot(
+            trip: original.trip, places: original.places, visits: [], journeys: [],
+            journeyGroups: [], stays: [currentStay], events: [event],
+            documentAssociations: [])
+        let date = try #require(TripClock.instant(local: "2026-01-02T12:00", zone: "UTC"))
+        let labels = try TripsTodayContent(snapshot: snapshot, date: date)
+            .environment(\.timeZone, .gmt)
+            .inspect()
+            .findAll(ViewType.NavigationLink.self)
+            .map { link in
+                try link.labelView().findAll(ViewType.Text.self).map { try $0.string() }
+            }
+            .map { $0.joined(separator: " ") }
+
+        #expect(labels.contains { $0.contains("HAPPENING NOW") && $0.contains("Current stay") })
+        #expect(labels.contains { $0.contains("UP NEXT") && $0.contains("Tomorrow appointment") })
+        #expect(!labels.contains { !$0.contains("UP NEXT") && $0.contains("Tomorrow appointment") })
     }
 
     @Test("Today keeps undated sources available while limiting the section to three")

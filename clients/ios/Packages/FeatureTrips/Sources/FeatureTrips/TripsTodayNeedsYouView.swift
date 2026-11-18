@@ -9,7 +9,7 @@ internal struct TripsTodayNeedsYouView: View {
         PopsCard(appearance: .featured) {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 HStack(alignment: .firstTextBaseline) {
-                    Label("Needs your attention", systemImage: "sparkle")
+                    Label("Needs your attention", systemImage: "exclamationmark.circle")
                         .font(.popsHeadline)
                         .foregroundStyle(Color.popsTripsAttention)
                     Spacer()
