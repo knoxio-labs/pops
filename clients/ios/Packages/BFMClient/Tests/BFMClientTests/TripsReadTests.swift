@@ -20,8 +20,8 @@ internal struct TripsReadTests {
         #expect(endpoint.local == nil)
         #expect(endpoint.timeZone == nil)
         let calls = await transport.recorded.all
-        #expect(calls.first?.operationID == "mobileTrips.getTripV2")
-        #expect(calls.first?.request.path == "/mobile/v2/trips/1")
+        #expect(calls.first?.operationID == "mobileTrips.getTripV3")
+        #expect(calls.first?.request.path == "/mobile/v3/trips/1")
     }
 
     @Test("every page is consumed with exact source metadata and no implicit first-trip selection")
@@ -57,6 +57,45 @@ internal struct TripsReadTests {
         #expect(journey.legs.first?.arrangement == "Booked")
         #expect(journey.legs.first?.purchase == nil)
         #expect(source.stays.isEmpty)
+    }
+
+    @Test("the current generated detail operation restores the persisted selected point")
+    internal func persistedPlacePin() async throws {
+        let timestamp = "2028-01-01T00:00:00Z"
+        let place = """
+            {
+                "id":11,"name":"Recife","sourceLinks":[],"createdAt":"\(timestamp)",
+                "updatedAt":"\(timestamp)","pin":{"latitude":-8.0476,"longitude":-34.877}
+            }
+            """
+        let visit = """
+            {
+                "id":21,"tripId":1,"placeId":11,"timing":{"month":{"year":2028,"month":1}},
+                "notes":"","sourceLinks":[],"createdAt":"\(timestamp)",
+                "updatedAt":"\(timestamp)"
+            }
+            """
+        let body = TripsWire.detail
+            .replacingOccurrences(
+                of: #""places":[]"#,
+                with: #""places":[PLACE]"#.replacingOccurrences(of: "PLACE", with: place)
+            )
+            .replacingOccurrences(
+                of: #""visits":[]"#,
+                with: #""visits":[VISIT]"#.replacingOccurrences(of: "VISIT", with: visit))
+        let repository = try BFMTripsRepository.stubbed(StubTransport(status: .ok, json: body))
+
+        let source = try #require(try await repository.trip(id: 1))
+
+        #expect(
+            source.places == [
+                TripPlace(
+                    id: 11,
+                    name: "Recife",
+                    pin: try TripPlacePin(latitude: -8.0476, longitude: -34.877),
+                    sourceLinks: []
+                )
+            ])
     }
 
     @Test("a successful HTTP response cannot substitute another trip's source identity")

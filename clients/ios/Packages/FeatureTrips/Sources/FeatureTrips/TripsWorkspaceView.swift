@@ -1,12 +1,24 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
 internal struct TripsWorkspaceView: View {
     @Bindable internal var model: TripsModel
     internal let tab: TripsTab
+    internal let placePinWriter: (any TripPlacePinWriting)?
     internal var capture: (() -> Void)?
     @State private var planLens = TripsPlanLens.line
     @State private var calendarSelection = TripsPlanCalendarSelection()
+
+    internal init(
+        model: TripsModel, tab: TripsTab, placePinWriter: (any TripPlacePinWriting)? = nil,
+        capture: (() -> Void)? = nil
+    ) {
+        self.model = model
+        self.tab = tab
+        self.placePinWriter = placePinWriter
+        self.capture = capture
+    }
 
     internal var body: some View {
         Group {
@@ -41,7 +53,8 @@ internal struct TripsWorkspaceView: View {
         case .loaded(let route):
             ScrollView {
                 TripsPlanView(
-                    route: route, snapshot: model.snapshot, lens: $planLens,
+                    route: route, snapshot: model.snapshot, placePinWriter: placePinWriter,
+                    lens: $planLens,
                     selectedDay: calendarSelection.binding(for: model)
                 ) {
                     model.source = $0

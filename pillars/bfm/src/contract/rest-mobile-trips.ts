@@ -7,10 +7,12 @@ import { MobileTripInputSchema, MobileTripPatchInputSchema } from './mobile-trip
 import {
   MobileTripDetailSchema,
   MobileTripDetailV2Schema,
+  MobileTripDetailV3Schema,
   MobileTripsPageSchema,
   MobileTripsQuerySchema,
 } from './mobile-trips-detail-schemas.js';
 import { MobileTripSchema } from './mobile-trips-schemas.js';
+import { MobileTripPlacePinSchema, MobileTripPlaceV3Schema } from './mobile-trips-schemas.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -102,5 +104,37 @@ export const mobileTripsContract = c.router({
     summary:
       'Read one day-aware trip with complete ordered sources and independent Journey endpoint precision',
     metadata: requires('trips.read'),
+  },
+  getTripV3: {
+    method: 'GET',
+    path: '/mobile/v3/trips/:id',
+    pathParams: z.object({ id: z.coerce.number().int().positive() }),
+    responses: {
+      200: MobileTripDetailV3Schema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Read one day-aware trip with explicitly selected place pins',
+    metadata: requires('trips.read'),
+  },
+  updatePlacePin: {
+    method: 'PATCH',
+    path: '/mobile/trips/:tripId/places/:placeId/pin',
+    pathParams: z.object({
+      tripId: z.coerce.number().int().positive(),
+      placeId: z.coerce.number().int().positive(),
+    }),
+    body: z.object({ pin: MobileTripPlacePinSchema }),
+    responses: {
+      200: MobileTripPlaceV3Schema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Select or move a place pin within a trip',
+    metadata: requires('trips.write'),
   },
 });

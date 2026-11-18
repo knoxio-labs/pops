@@ -13,7 +13,7 @@ import { openTripsDb } from '../index.js';
 import * as schema from '../schema.js';
 import { getMeetingPlan } from '../services/meeting-plan-queries.js';
 import { operateMeetingPlan } from '../services/meeting-plans.js';
-import { createPlace, getTrip, listVisits } from '../services/records.js';
+import { getTrip, listVisits } from '../services/records.js';
 import { readSourceWorkspace } from '../services/source-queries.js';
 import { send as operateCapture } from './capture-test-utils.js';
 import { migrationsBefore } from './migration-test-utils.js';
@@ -32,8 +32,16 @@ it('upgrades an existing trip database without changing its route and persists r
     const trip = TripSchema.parse(
       db.insert(schema.trips).values({ name: 'Retained' }).returning().get()
     );
-    const place = createPlace(db, { name: 'Repeated town' });
     const timestamp = '2028-01-01T00:00:00.000Z';
+    const place = {
+      id: Number(
+        raw
+          .prepare(
+            'INSERT INTO places (name, source_links, created_at, updated_at) VALUES (?, ?, ?, ?)'
+          )
+          .run('Repeated town', '[]', timestamp, timestamp).lastInsertRowid
+      ),
+    };
     const firstId = Number(
       raw
         .prepare(

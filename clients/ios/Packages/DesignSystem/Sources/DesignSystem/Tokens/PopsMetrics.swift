@@ -68,4 +68,7 @@ public enum PopsSize {
 
     /// See ``pageWidth``.
     public static let pageHeight: CGFloat = 168
+
+    /// The minimum height that keeps an interactive map useful in a scrolling view.
+    public static let mapCanvasHeight: CGFloat = 300
 }

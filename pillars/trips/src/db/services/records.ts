@@ -1,22 +1,14 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 
-import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
-import { places, trips, visits } from '../schema.js';
+import { TripSchema, VisitSchema } from '../../contract/schemas.js';
+import { trips, visits } from '../schema.js';
+import { getPlace } from './places.js';
 import { appendRouteVisit, initializeTripRoute } from './route-storage.js';
 import { projectVisitOrder, reorderLegacyRoute } from './route-visit-order.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { validateTripAssociations } from './trip-associations.js';
 
-import type {
-  Place,
-  Trip,
-  Visit,
-  PlaceInput,
-  PlaceUpdate,
-  TripInput,
-  VisitInput,
-  VisitUpdate,
-} from '../../contract/schemas.js';
+import type { Trip, Visit, TripInput, VisitInput, VisitUpdate } from '../../contract/schemas.js';
 import type { TripsDb } from '../index.js';
 
 /** Read trips in creation order without deriving a name or timing. */
@@ -66,41 +58,7 @@ export function updateTrip(db: TripsDb, id: number, input: TripInput): Trip {
   });
 }
 
-/** List manually captured place identities without provider inference or deduplication. */
-export function listPlaces(db: TripsDb): Place[] {
-  return db
-    .select()
-    .from(places)
-    .orderBy(asc(places.id))
-    .all()
-    .map((row) => PlaceSchema.parse(row));
-}
-
-/** Resolve an explicit place identity. */
-export function getPlace(db: TripsDb, id: number): Place {
-  return PlaceSchema.parse(
-    requireOwnedRecord(db.select().from(places).where(eq(places.id, id)).get())
-  );
-}
-
-/** Create a reusable place without guessing whether similarly named places are identical. */
-export function createPlace(db: TripsDb, input: PlaceInput): Place {
-  return PlaceSchema.parse(requireOwnedRecord(db.insert(places).values(input).returning().get()));
-}
-
-/** Patch a place while retaining every visit's reference to its identity. */
-export function updatePlace(db: TripsDb, id: number, input: PlaceUpdate): Place {
-  return PlaceSchema.parse(
-    requireOwnedRecord(
-      db
-        .update(places)
-        .set({ ...input, updatedAt: new Date().toISOString() })
-        .where(eq(places.id, id))
-        .returning()
-        .get()
-    )
-  );
-}
+export { createPlace, getPlace, listPlaces, updatePlace } from './places.js';
 
 /** Read one trip's visits in explicit route order, including repeated places. */
 export function listVisits(db: TripsDb, tripId: number): Visit[] {

@@ -9,6 +9,7 @@ import {
 } from '../../contract/mobile-trips-journey-schemas.js';
 import {
   MobileTripPlaceSchema,
+  MobileTripPlaceV3Schema,
   MobileTripSchema,
   MobileTripVisitSchema,
 } from '../../contract/mobile-trips-schemas.js';
@@ -23,6 +24,8 @@ export const TripsWire = {
   trip: MobileTripSchema,
   trips: z.object({ trips: z.array(MobileTripSchema).refine(uniqueTripsIds) }),
   places: z.object({ places: z.array(MobileTripPlaceSchema).refine(uniqueTripsIds) }),
+  placesV3: z.object({ places: z.array(MobileTripPlaceV3Schema).refine(uniqueTripsIds) }),
+  placeV3: MobileTripPlaceV3Schema,
   visits: z.object({ visits: z.array(MobileTripVisitSchema).refine(uniqueTripsIds) }),
   journeys: z.object({ journeys: z.array(MobileJourneySchema).refine(uniqueTripsIds) }),
   legs: z.object({ legs: z.array(MobileJourneyLegV2Schema).refine(uniqueTripsIds) }),

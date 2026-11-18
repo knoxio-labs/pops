@@ -26,10 +26,7 @@ internal struct TripsJourneyLegView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: PopsSpacing.lg) {
                         endpoint(leg.from, role: "Departure")
-                        Image(systemName: "arrow.right")
-                            .font(.popsHeadline)
-                            .foregroundStyle(Color.popsTrips)
-                            .accessibilityHidden(true)
+                        horizontalRoute
                         endpoint(leg.to, role: "Arrival")
                     }
                     .fixedSize(horizontal: true, vertical: false)
@@ -65,11 +62,33 @@ internal struct TripsJourneyLegView: View {
     private var verticalRoute: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             endpoint(leg.from, role: "Departure")
-            Image(systemName: "arrow.down")
-                .foregroundStyle(Color.popsTrips)
-                .accessibilityHidden(true)
+            VStack(spacing: PopsSpacing.xs) {
+                Capsule().fill(Color.popsTrips.opacity(0.55))
+                    .frame(width: PopsBorder.hairline, height: PopsSpacing.md)
+                Image(systemName: "arrow.down")
+                    .foregroundStyle(Color.popsTrips)
+                    .accessibilityHidden(true)
+            }
+            .accessibilityHidden(true)
             endpoint(leg.to, role: "Arrival")
         }
+    }
+
+    private var horizontalRoute: some View {
+        HStack(spacing: PopsSpacing.xs) {
+            Capsule().fill(Color.popsTrips.opacity(0.55))
+                .frame(maxWidth: .infinity)
+                .frame(height: PopsBorder.hairline)
+            Image(systemName: "arrow.forward")
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsTrips)
+                .accessibilityHidden(true)
+            Capsule().fill(Color.popsTrips.opacity(0.55))
+                .frame(maxWidth: .infinity)
+                .frame(height: PopsBorder.hairline)
+        }
+        .frame(minWidth: PopsSize.touchTarget)
+        .accessibilityHidden(true)
     }
 
     private func endpoint(_ endpoint: TripEndpoint, role: String) -> some View {

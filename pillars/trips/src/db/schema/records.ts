@@ -4,7 +4,7 @@ import { removalColumns } from './removal-columns.js';
 
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
-import type { SourceLink, VisitTiming } from '../../contract/schemas.js';
+import type { PlacePin, SourceLink, VisitTiming } from '../../contract/schemas.js';
 
 const audit = {
   createdAt: text('created_at')
@@ -32,6 +32,7 @@ export const trips = sqliteTable('trips', {
 export const places = sqliteTable('places', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  pin: text('pin', { mode: 'json' }).$type<PlacePin>(),
   sourceLinks: text('source_links', { mode: 'json' }).$type<SourceLink[]>().notNull().default([]),
   ...audit,
 });

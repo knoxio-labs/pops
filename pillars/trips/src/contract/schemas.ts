@@ -65,10 +65,21 @@ export const TripSchema = z.object({
   ...AuditFields,
 });
 
-/** A reusable, manually entered place identity; it does not own contact addresses or provider data. */
+/** A selected WGS84 point in decimal degrees; geographic bounds follow RFC 7946 section 5.
+ * https://www.rfc-editor.org/rfc/rfc7946#section-5
+ */
+export const PlacePinSchema = z
+  .object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })
+  .strict();
+
+/** A reusable place identity with an optional selected map point, never inferred from its name. */
 export const PlaceSchema = z.object({
   id: IdSchema,
   name: NameSchema,
+  pin: PlacePinSchema.nullable().optional(),
   sourceLinks: z.array(SourceLinkSchema),
   ...AuditFields,
 });
@@ -98,13 +109,14 @@ export const CreateTripBody = z.object({
 /** Mutable trip metadata; omitted fields retain their original values. */
 export const UpdateTripBody = CreateTripBody;
 
-/** Minimal manual place capture, reusable by multiple visits and trips. */
+/** Reusable place capture; omitted/null pins remain unlocated until a point is selected. */
 export const CreatePlaceBody = z.object({
   name: NameSchema,
+  pin: PlacePinSchema.nullable().optional(),
   sourceLinks: z.array(SourceLinkSchema).optional(),
 });
 
-/** Mutable place fields; updates preserve its identity and existing visit references. */
+/** Omitted pins are retained, null clears both coordinates, and a point replaces both. */
 export const UpdatePlaceBody = CreatePlaceBody.partial();
 
 /** Explicit visit capture; new visits append to the route without deriving dates. */
@@ -127,6 +139,8 @@ export const ReorderVisitsBody = z.object({ visitIds: z.array(IdSchema) });
 export type Trip = z.infer<typeof TripSchema>;
 /** Persisted reusable place identity. */
 export type Place = z.infer<typeof PlaceSchema>;
+/** A complete explicitly selected point; partial coordinates are invalid. */
+export type PlacePin = z.infer<typeof PlacePinSchema>;
 /** Persisted visit source facts. */
 export type Visit = z.infer<typeof VisitSchema>;
 /** Structured source timing, independent of route position. */

@@ -38,6 +38,39 @@ function sourceJourneys(detail: MobileTripDetailV2): {
 } {
   return { journeys: detail.journeys.map(({ legs: _legs, ...journey }) => journey) };
 }
+function placeRoutes(
+  detail: MobileTripDetailV2,
+  responses: TripsResponses,
+  answer: (
+    operation: string,
+    input: unknown,
+    fallback: unknown,
+    override?: CallResult<unknown>
+  ) => Promise<CallResult<unknown>>
+): {
+  list: (input: unknown) => Promise<CallResult<unknown>>;
+  update: (input: unknown) => Promise<CallResult<unknown>>;
+} {
+  return {
+    list: (input: unknown) =>
+      answer(
+        'places.list',
+        input,
+        { places: detail.places.map((place) => ({ ...place, pin: null })) },
+        responses.places
+      ),
+    update: (input: unknown) => {
+      const selected = z.object({ id: z.number(), pin: z.unknown() }).parse(input);
+      const place = detail.places.find((candidate) => candidate.id === selected.id);
+      return answer(
+        'places.update',
+        input,
+        place === undefined ? {} : { ...place, pin: selected.pin },
+        responses.places
+      );
+    },
+  };
+}
 /** Drives the actual authenticated gateway/client mapping without a network or unsafe handle casts. */
 export function tripsClientOver(
   detail: MobileTripDetailV2,
@@ -62,9 +95,7 @@ export function tripsClientOver(
         list: (input) => answer('trips.list', input, { trips: [detail.trip] }, responses.trips),
         get: (input) => answer('trips.get', input, detail.trip, responses.trip),
       },
-      places: {
-        list: (input) => answer('places.list', input, { places: detail.places }, responses.places),
-      },
+      places: placeRoutes(detail, responses, answer),
       visits: {
         list: (input) => answer('visits.list', input, { visits: detail.visits }, responses.visits),
       },

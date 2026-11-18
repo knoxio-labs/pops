@@ -126,7 +126,7 @@ private struct TripsTodayFocusCard: View {
     let snapshot: TripSnapshot
     let zone: TimeZone
 
-    private var accent: Color { tripsSourceAccent(source) }
+    private var accent: Color { TripsSourceStyle(source: source).accent }
 
     var body: some View {
         NavigationLink {
@@ -179,7 +179,7 @@ private struct TripsTodaySourceCard: View {
     let snapshot: TripSnapshot
     let zone: TimeZone
 
-    private var accent: Color { tripsSourceAccent(source) }
+    private var accent: Color { TripsSourceStyle(source: source).accent }
 
     var body: some View {
         NavigationLink {
@@ -220,13 +220,5 @@ private struct TripsTodaySourceCard: View {
         guard let start = source.start else { return "Date not set" }
         return
             "\(TripClock.dateLabel(start, zone: zone)) · \(TripClock.clockLabel(start, zone: zone))"
-    }
-}
-
-private func tripsSourceAccent(_ source: TripSource) -> Color {
-    switch source {
-    case .stay: .popsSuccess
-    case .journey: .popsAccent
-    case .event: .popsPurchases
     }
 }

@@ -39,10 +39,12 @@ internal struct TripsContentView: View {
     @ViewBuilder private var content: some View {
         if case .paired(let device) = composition.session.state {
             let captures = composition.tripCaptureRepository(for: device)
+            let trips = composition.tripsRepository(for: device)
             TripsRootView(
-                repository: composition.tripsRepository(for: device),
+                repository: trips,
                 documents: composition.documentsRepository(for: device),
                 captureWriter: captures,
+                placePinWriter: trips,
                 captureStore: composition.tripCaptureDraftStore(for: device),
                 routeReader: composition.tripsRouteRepository(for: device),
                 captureReader: captures

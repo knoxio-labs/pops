@@ -74,6 +74,14 @@ describe('native Trips capability, discovery and source contract', () => {
     ).not.toContain('trips.capture.write');
   });
 
+  it('records the downstream place-pin scope required by trip writes', () => {
+    expect(MOBILE_CAPABILITY_SCOPES['trips.write']).toEqual([
+      'trips.trips.create',
+      'trips.trips.update',
+      'trips.places.update',
+    ]);
+  });
+
   it.each(['healthy', 'degraded', 'unavailable', 'contract-mismatch'] as const)(
     'advertises exact Trips reachability %s only to operator sessions',
     (reachability) => {

@@ -30,9 +30,16 @@ it('upgrades actual Visit order without inferring Journey placement, persists UU
       db.insert(schema.trips).values({ name: 'Historical trip' }).returning().get()
     );
     const empty = TripSchema.parse(db.insert(schema.trips).values({}).returning().get());
-    const place = db.insert(schema.places).values({ name: 'Repeated city' }).returning().get();
-    if (place === undefined) throw new Error('Expected place');
     const timestamp = '2028-01-01T00:00:00.000Z';
+    const place = {
+      id: Number(
+        raw
+          .prepare(
+            'INSERT INTO places (name, source_links, created_at, updated_at) VALUES (?, ?, ?, ?)'
+          )
+          .run('Repeated city', '[]', timestamp, timestamp).lastInsertRowid
+      ),
+    };
     const firstId = Number(
       raw
         .prepare(

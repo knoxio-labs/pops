@@ -95,19 +95,26 @@ internal struct TripsNavigationTests {
         #expect(model.snapshot == snapshot)
     }
 
-    @Test("calendar grouping preserves undated originals and spanning intervals inside a range")
-    internal func undatedAndSpanningRows() throws {
+    @Test("timeline grouping preserves undated sources and intervals spanning the selected day")
+    internal func undatedAndSpanningSources() throws {
         let snapshot = try TripNavigationTestContext.snapshot()
         var filter = TripTimelineFilter()
         filter.grouping = .day
         filter.fromDay = "2026-01-02"
         filter.throughDay = "2026-01-02"
         let sources = filter.sources(in: snapshot, at: .now, zone: .gmt)
-        let view = TripsTimelineCalendar(sources: sources, places: snapshot.places, filter: filter)
-        let rows = try view.environment(\.timeZone, .gmt).inspect().findAll(TripsSourceRow.self)
-        let values = try rows.map { try $0.actualView().source.id }
-        #expect(values.contains("stay-1"))
-        #expect(values.contains("journey-2"))
+        let groups = tripTimelineGroups(
+            snapshot: snapshot, sources: sources,
+            visits: filter.visits(in: snapshot, sources: sources),
+            grouping: filter.grouping, zone: .gmt)
+        let sourceIDs = groups.flatMap(\.entries).flatMap { entry in
+            switch entry {
+            case .visit(let visit): visit.sources.map(\.id)
+            case .source(let source): [source.id]
+            }
+        }
+        #expect(sourceIDs.contains("stay-1"))
+        #expect(sourceIDs.contains("journey-2"))
     }
 
     @Test(

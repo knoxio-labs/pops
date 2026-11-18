@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { CreatePlaceBody } from '../../contract/schemas.js';
 import { openTripsDb, type OpenedTripsDb } from '../index.js';
 import { visits } from '../schema.js';
 import {
@@ -58,6 +59,31 @@ function fixture() {
 }
 
 describe('Trips persistence and route invariants', () => {
+  it('persists complete selected place pins, preserves omitted pins and clears them explicitly', () => {
+    const place = createPlace(opened.db, {
+      name: 'Recife',
+      pin: { latitude: -8.0476, longitude: -34.877 },
+    });
+    expect(place.pin).toEqual({ latitude: -8.0476, longitude: -34.877 });
+    expect(() =>
+      createPlace(opened.db, {
+        name: 'Invalid point',
+        pin: { latitude: 91, longitude: 0 },
+      })
+    ).toThrow();
+    expect(
+      CreatePlaceBody.safeParse({
+        name: 'Partial point',
+        pin: { latitude: -8.0476 },
+      }).success
+    ).toBe(false);
+    expect(updatePlace(opened.db, place.id, { name: 'Recife, Pernambuco' }).pin).toEqual(place.pin);
+    opened.raw.close();
+    opened = openTripsDb(join(directory, 'trips.db'));
+    expect(getPlace(opened.db, place.id).pin).toEqual(place.pin);
+    expect(updatePlace(opened.db, place.id, { pin: null }).pin).toBeNull();
+  });
+
   it('persists repeated place identities, absent timing and explicit source metadata across reopen', () => {
     const { db, trip, place, first, second } = fixture();
     const untimed = createVisit(db, trip.id, { placeId: place.id });

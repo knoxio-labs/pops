@@ -20,7 +20,7 @@ extension AppComposition {
         BFMTripCapturesRepository(client: authenticated(device))
     }
 
-    internal func tripsRepository(for device: PairedDevice) -> any TripsReading {
+    internal func tripsRepository(for device: PairedDevice) -> BFMTripsRepository {
         BFMTripsRepository(client: authenticated(device))
     }
 

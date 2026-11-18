@@ -27,6 +27,55 @@ describe('reader-first source alignment', () => {
         .success
     ).toBe(false);
   });
+  it('keeps v1/v2 detail unchanged and exposes persisted pins only in v3', async () => {
+    const detail = tripsFixture();
+    const { client } = tripsClientOver(detail);
+    const [legacy, dayAware, mapped] = await Promise.all([
+      client.getTrip(7),
+      client.getTrip(7),
+      client.getTripV3(7),
+    ]);
+    expect(legacy).toMatchObject({ kind: 'ok' });
+    expect(dayAware).toMatchObject({ kind: 'ok' });
+    expect(mapped).toMatchObject({
+      kind: 'ok',
+      value: {
+        places: [
+          { id: 11, pin: null },
+          { id: 12, pin: null },
+        ],
+      },
+    });
+    if (legacy.kind === 'ok')
+      expect(legacy.value.places.every((place) => !('pin' in place))).toBe(true);
+    if (dayAware.kind === 'ok')
+      expect(dayAware.value.places.every((place) => !('pin' in place))).toBe(true);
+  });
+
+  it('writes a complete pin only to a place referenced by the trip', async () => {
+    const detail = tripsFixture();
+    const { client, calls } = tripsClientOver(detail);
+    const result = await client.updatePlacePin(7, 11, { latitude: -33.8688, longitude: 151.2093 });
+    expect(result).toMatchObject({
+      kind: 'ok',
+      value: { id: 11, pin: { latitude: -33.8688, longitude: 151.2093 } },
+    });
+    expect(calls.at(-1)).toEqual({
+      operation: 'places.update',
+      input: { id: 11, pin: { latitude: -33.8688, longitude: 151.2093 } },
+    });
+    const journeyEndpoint = await client.updatePlacePin(7, 12, {
+      latitude: -22.9068,
+      longitude: -43.1729,
+    });
+    expect(journeyEndpoint).toMatchObject({
+      kind: 'ok',
+      value: { id: 12, pin: { latitude: -22.9068, longitude: -43.1729 } },
+    });
+    const foreign = await client.updatePlacePin(7, 13, { latitude: 0, longitude: 0 });
+    expect(foreign).toMatchObject({ kind: 'not-found', status: 404 });
+    expect(calls.filter(({ operation }) => operation === 'places.update')).toHaveLength(2);
+  });
   it.each([{ min: 0 }, { min: 3 }, { max: 2 }, { min: 1, max: 4 }])(
     'preserves supplied duration bounds $min/$max',
     async (bounds) => {

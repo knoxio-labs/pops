@@ -320,6 +320,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'trips',
+    operationId: 'places.update',
+    path: '/places/{id}',
+    method: 'patch',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
     operationId: 'visits.list',
     path: '/trips/{tripId}/visits',
     method: 'get',

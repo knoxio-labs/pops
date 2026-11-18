@@ -127,6 +127,13 @@
       "when": 1794886959269,
       "tag": "0017_booking_imports",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1794919401264,
+      "tag": "0018_regular_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

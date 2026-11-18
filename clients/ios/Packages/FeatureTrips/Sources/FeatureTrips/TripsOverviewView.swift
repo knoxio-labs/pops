@@ -68,7 +68,7 @@ internal struct TripsOverviewView: View {
         switch projection.heading {
         case .current, .recorded: nil
         case .travelDay: projection.heading.title
-        case .upcoming(_, let source): "Next · \(source)"
+        case .upcoming: nil
         }
     }
 

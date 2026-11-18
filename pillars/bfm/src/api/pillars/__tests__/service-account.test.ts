@@ -156,6 +156,7 @@ describe('the granted scopes', () => {
       'trips.trips.list',
       'trips.trips.get',
       'trips.places.list',
+      'trips.places.update',
       'trips.visits.list',
       'trips.journeys.list',
       'trips.journeyLegs.list',

@@ -58,5 +58,16 @@ export function makeMobileTripsHandlers(deps: MobileTripsHandlerDeps) {
       if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
       return { status: 200 as const, body: outcome.value };
     },
+    getTripV3: async ({ params }: Req['getTripV3']) => {
+      const outcome = await deps.trips.getTripV3(params.id);
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+      return { status: 200 as const, body: outcome.value };
+    },
+    updatePlacePin: async ({ params, body }: Req['updatePlacePin']) => {
+      const outcome = await deps.trips.updatePlacePin(params.tripId, params.placeId, body.pin);
+      return isGatewayOk(outcome)
+        ? { status: 200 as const, body: outcome.value }
+        : toTripWriteErrorResponse(outcome);
+    },
   };
 }
