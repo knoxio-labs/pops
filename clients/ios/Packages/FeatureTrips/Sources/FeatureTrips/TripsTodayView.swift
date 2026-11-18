@@ -4,37 +4,70 @@ import SwiftUI
 
 internal struct TripsTodayView: View {
     internal let snapshot: TripSnapshot
+    internal let route: TripRouteSnapshot?
+    internal let selectPlanTarget: (TripPlanLineIdentity) -> Void
+
+    internal init(
+        snapshot: TripSnapshot, route: TripRouteSnapshot? = nil,
+        selectPlanTarget: @escaping (TripPlanLineIdentity) -> Void = { _ in }
+    ) {
+        self.snapshot = snapshot
+        self.route = route
+        self.selectPlanTarget = selectPlanTarget
+    }
 
     internal var body: some View {
         TimelineView(.everyMinute) { context in
-            TripsTodayContent(snapshot: snapshot, date: context.date)
+            TripsTodayContent(
+                snapshot: snapshot, date: context.date, route: route,
+                selectPlanTarget: selectPlanTarget)
         }
     }
 }
 
 internal struct TripsTodayContent: View {
     internal let snapshot: TripSnapshot
+    internal let route: TripRouteSnapshot?
     internal let date: Date
+    internal let selectPlanTarget: (TripPlanLineIdentity) -> Void
     @Environment(\.timeZone) private var zone
+
+    internal init(
+        snapshot: TripSnapshot, date: Date, route: TripRouteSnapshot? = nil,
+        selectPlanTarget: @escaping (TripPlanLineIdentity) -> Void = { _ in }
+    ) {
+        self.snapshot = snapshot
+        self.date = date
+        self.route = route
+        self.selectPlanTarget = selectPlanTarget
+    }
 
     internal var body: some View {
         let projection = TripOverviewProjection(
             snapshot: snapshot, at: date, zone: zone,
-            visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits)
+            visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits,
+            route: route)
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 TripsOverviewView(projection: projection, date: date, trip: snapshot.trip)
                 if !projection.now.isEmpty {
                     currentFocus(projection.now)
-                } else if let next = projection.next.first {
-                    TripsTodayFocusCard(
-                        source: next, title: "Up next", detail: dateLabel(next),
-                        snapshot: snapshot, zone: zone)
-                } else {
+                    nextFocus(projection)
+                } else if projection.next.isEmpty {
                     breathingRoom
                 }
-                upcoming(projection.next, excluding: projection.now.isEmpty ? 1 : 0)
-                TripsPlanStopStrip(snapshot: snapshot)
+                if route != nil, !projection.chapters.isEmpty {
+                    TripsChapterRail(chapters: projection.chapters) {
+                        selectPlanTarget(.root(.visit($0)))
+                    }
+                }
+                if !projection.attention.isEmpty {
+                    TripsTodayNeedsYouView(attention: projection.attention) {
+                        selectPlanTarget($0.target)
+                    }
+                }
+                if projection.now.isEmpty { nextFocus(projection) }
+                upcoming(projection.next, excluding: projection.nextFocus.isEmpty ? 0 : 1)
                 if !projection.other.isEmpty { unscheduled(projection.other) }
                 if !snapshot.trip.notes.isEmpty { notes }
             }
@@ -43,6 +76,14 @@ internal struct TripsTodayContent: View {
             .padding(.bottom, PopsSpacing.xxl)
         }
         .background(Color.popsBackground)
+    }
+
+    @ViewBuilder private func nextFocus(_ projection: TripOverviewProjection) -> some View {
+        if let next = projection.nextFocus.first {
+            TripsTodayFocusCard(
+                source: next, title: "Up next", detail: dateLabel(next),
+                snapshot: snapshot, zone: zone)
+        }
     }
 
     @ViewBuilder private func currentFocus(_ sources: [TripSource]) -> some View {

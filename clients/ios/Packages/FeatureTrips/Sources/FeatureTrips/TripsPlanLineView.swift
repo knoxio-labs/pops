@@ -54,6 +54,7 @@ internal struct TripsPlanLineView: View {
                 }())
             TripsPlanLineRow(item: item, places: places, openSource: openSource)
         }
+        .id(item.id)
     }
 }
 

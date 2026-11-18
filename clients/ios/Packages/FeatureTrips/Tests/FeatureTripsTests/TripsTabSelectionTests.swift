@@ -37,6 +37,39 @@ internal struct TripsTabSelectionTests {
         }
     }
 
+    @Test("opening a visit moves to Plan and consumes its shared scroll target")
+    internal func planVisitNavigation() throws {
+        let model = TripsModel(
+            repository: TabSelectionReader(snapshot: try TripTestSources.snapshot()))
+        model.tab = .today
+
+        model.openPlanTarget(.root(.visit(42)))
+
+        #expect(model.tab == .plan)
+        #expect(model.pendingPlanTarget == .root(.visit(42)))
+        #expect(model.consumePendingPlanTarget() == .root(.visit(42)))
+        #expect(model.pendingPlanTarget == nil)
+    }
+
+    @Test("selecting another trip clears an unconsumed Plan visit target")
+    internal func planVisitTargetDoesNotCrossTrips() async throws {
+        let first = try TripTestSources.snapshot()
+        let second = TripSnapshot(
+            trip: TripRecord(
+                id: 987, name: "Second trip", destination: "", when: "",
+                tagId: nil, parentId: nil, notes: "", sourceLinks: []),
+            places: [], visits: [], journeys: [], journeyGroups: [], stays: [], events: [],
+            documentAssociations: [])
+        let model = TripsModel(repository: TabSelectionReader(snapshots: [first, second]))
+        await model.select(first.trip.id)
+        model.openPlanTarget(.root(.visit(42)))
+
+        await model.select(second.trip.id)
+
+        #expect(model.selectedID == second.trip.id)
+        #expect(model.pendingPlanTarget == nil)
+    }
+
     @Test("explicit selection starts capture reading even when detail fails")
     internal func independentInbox() async throws {
         let snapshot = try TripTestSources.snapshot()
@@ -74,19 +107,24 @@ internal struct TripsTabSelectionTests {
 }
 
 private actor TabSelectionReader: TripsReading, TripCapturesReading {
-    let snapshot: TripSnapshot
+    let snapshots: [TripSnapshot]
     let failsDetail: Bool
     private(set) var requestedCaptures: [Int] = []
 
     init(snapshot: TripSnapshot, failsDetail: Bool = false) {
-        self.snapshot = snapshot
+        snapshots = [snapshot]
         self.failsDetail = failsDetail
     }
 
-    func trips() async throws -> [TripRecord] { [snapshot.trip] }
+    init(snapshots: [TripSnapshot]) {
+        self.snapshots = snapshots
+        failsDetail = false
+    }
+
+    func trips() async throws -> [TripRecord] { snapshots.map(\.trip) }
     func trip(id: Int) async throws -> TripSnapshot? {
         if failsDetail { throw RepositoryError.unavailable }
-        return snapshot.trip.id == id ? snapshot : nil
+        return snapshots.first { $0.trip.id == id }
     }
     func captures(tripID: Int) async throws -> TripCaptureWorkspace {
         requestedCaptures.append(tripID)

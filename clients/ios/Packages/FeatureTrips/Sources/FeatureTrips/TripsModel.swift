@@ -33,6 +33,7 @@ internal final class TripsModel {
     }
     internal private(set) var sourceEpoch = UUID()
     internal var capture: TripCaptureDraft?
+    internal private(set) var pendingPlanTarget: TripPlanLineIdentity?
     @ObservationIgnored internal private(set) var navigationTask: Task<Void, Never>?
     private let repository: any TripsReading
     private let selection: (any TripOfflineSelection)?
@@ -53,6 +54,16 @@ internal final class TripsModel {
     internal func dismissSearch() {
         guard tab == .search else { return }
         tab = searchOrigin
+    }
+
+    internal func openPlanTarget(_ target: TripPlanLineIdentity) {
+        pendingPlanTarget = target
+        tab = .plan
+    }
+
+    internal func consumePendingPlanTarget() -> TripPlanLineIdentity? {
+        defer { pendingPlanTarget = nil }
+        return pendingPlanTarget
     }
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
@@ -117,6 +128,7 @@ internal final class TripsModel {
     }
 
     private func readSelection(_ id: Int) async -> Bool {
+        pendingPlanTarget = nil
         let token = UUID()
         request = token
         selectedID = id

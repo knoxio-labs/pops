@@ -131,6 +131,33 @@ internal struct TripOverviewProjectionTests {
         #expect(projection.chapters[2].timing.contains("2026"))
     }
 
+    @Test("Today chapters and planning prompts follow only the canonical route")
+    internal func canonicalRouteAndAttention() throws {
+        let original = try TripTestSources.snapshot()
+        let open = visit(9, arrival: "2026-01-07", departure: nil)
+        let bounded = visit(7, arrival: "2026-01-10", departure: "2026-01-12")
+        let snapshot = TripSnapshot(
+            trip: original.trip, places: original.places, visits: [bounded, open],
+            journeys: original.journeys, journeyGroups: original.journeyGroups,
+            stays: original.stays, events: original.events,
+            documentAssociations: original.documentAssociations)
+        let path = TripRoutePath(
+            id: 5, title: "Coast first", gapId: 12, state: .alternative,
+            members: [.visit(11)])
+        let route = TripRouteSnapshot(
+            tripId: snapshot.trip.id, revision: 4,
+            order: [.visit(9), .gap(12), .visit(7)], paths: [path], missingSources: [])
+
+        let projection = try overview(snapshot, at: "2026-01-02T12:00", route: route)
+
+        #expect(projection.chapters.map(\.id) == [9, 7])
+        #expect(
+            projection.attention == [
+                .openDates(visitID: 9, place: "Recife"),
+                .openRouteSection(gapID: 12, hasPaths: true),
+            ])
+    }
+
     @Test("chapter summaries retain independent exact bounds, approximate month and duration")
     internal func independentTimingFacts() {
         let timing = TripVisitTiming(
@@ -159,13 +186,16 @@ internal struct TripOverviewProjectionTests {
             buffers: journey.buffers, legs: [leg])
     }
 
-    private func overview(_ snapshot: TripSnapshot, at local: String) throws
+    private func overview(
+        _ snapshot: TripSnapshot, at local: String, route: TripRouteSnapshot? = nil
+    ) throws
         -> TripOverviewProjection
     {
         let instant = try #require(TripClock.instant(local: local, zone: "UTC"))
         return TripOverviewProjection(
             snapshot: snapshot, at: instant, zone: .gmt,
-            visibleSources: allTripSources(snapshot), visibleVisits: snapshot.visits)
+            visibleSources: allTripSources(snapshot), visibleVisits: snapshot.visits,
+            route: route)
     }
 
     private func subset(_ source: TripSnapshot, stays: [TripStay], visits: [TripVisit]? = nil)
