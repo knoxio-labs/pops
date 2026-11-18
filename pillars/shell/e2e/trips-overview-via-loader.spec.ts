@@ -110,6 +110,7 @@ for (const viewport of [
       ['/trips/7/rentals', { rentals: [] }],
       ['/trips/7/events', { events: [event] }],
       ['/trips/7/events/61', event],
+      ['/trips/7/responsibilities', { responsibilities: [] }],
       [
         '/trips/7/responsibilities/stay/13',
         { tripId: 7, targetKind: 'stay', targetId: 13, responsibility: null, revision: 0 },

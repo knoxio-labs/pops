@@ -53,6 +53,7 @@ export { TripOverview } from './overview/TripOverview';
 export type {
   TripOverviewProps,
   OverviewLabels,
+  OverviewResponsibilityHost,
   OverviewKind,
   OverviewPlacementTarget,
   OverviewLinkKind,

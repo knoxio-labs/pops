@@ -23,13 +23,14 @@ export function OverviewSheet(
             <TableHead>{props.labels.sheet.when}</TableHead>
             <TableHead>{props.labels.sheet.what}</TableHead>
             <TableHead>{props.labels.sheet.state}</TableHead>
+            <TableHead>{props.labels.sheet.with}</TableHead>
             <TableHead>{props.labels.sheet.originals}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {props.items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="whitespace-normal text-muted-foreground">
+              <TableCell colSpan={5} className="whitespace-normal text-muted-foreground">
                 {props.projection?.order.length
                   ? props.labels.status('workspace.noRouteResults')
                   : props.labels.empty}

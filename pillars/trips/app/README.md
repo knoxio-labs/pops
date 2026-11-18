@@ -67,6 +67,9 @@ identities; journeys stay separate until a placement contract exists. Missing or
 unassociated facts remain visible, and document associations retain source identities
 without pretending to resolve Documents originals. The overview's When subtitle is
 opaque; its displayed outer dates come from ordered visit bounds.
+The Sheet's With column shows only explicitly saved responsibility for Journeys, Stays,
+Events and Rentals. Missing assignments appear as Unassigned; failed reads remain Not
+loaded, and Contact names resolve only through the host's Contacts capability.
 The shell supplies the overview library's utilities through the shared theme,
 outer page padding and shared component styles. The remote stylesheet scans only
 the Trips app's source.
