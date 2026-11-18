@@ -38,6 +38,8 @@ internal struct TripsTodayContentTests {
 
         #expect(inspected.findAll(TripsChapterRail.self).count == 1)
         #expect(inspected.findAll(TripsTodayNeedsYouView.self).count == 1)
+        #expect(try inspected.find(text: "The route").string() == "The route")
+        #expect(try inspected.find(text: "1 stop").string() == "1 stop")
         try inspected.find(TripsChapterRail.self).find(ViewType.Button.self).tap()
         #expect(selectedTargets == [.root(.visit(visit.id))])
         try inspected.find(TripsTodayNeedsYouView.self).find(ViewType.Button.self).tap()
