@@ -122,6 +122,83 @@ internal struct TripSourceDetailTests {
         #expect(journey.legs == snapshot.journeys.first { $0.id == journey.id }?.legs)
     }
 
+    @Test("journey detail keeps local endpoints and each leg's planning states independent")
+    internal func journeyDetailLegs() throws {
+        let departureSource = TripSourceLink(uri: "opaque:departure", label: nil)
+        let departure = TripEndpoint(
+            placeId: nil, sourceLabel: "SYD", sourceLinks: [departureSource],
+            local: "2026-11-24T14:05", timeZone: "Australia/Sydney")
+        let connection = TripEndpoint(
+            placeId: nil, sourceLabel: "DFW", sourceLinks: nil,
+            local: "2026-11-24T12:30", timeZone: "America/Chicago")
+        let arrival = TripEndpoint(
+            placeId: nil, sourceLabel: "GRU", sourceLinks: nil,
+            local: nil, timeZone: "America/Sao_Paulo", date: "2026-11-25")
+        let segmentSource = TripSourceLink(uri: "opaque:segment", label: "Segment ticket")
+        let firstLeg = TripJourneyLeg(
+            id: 11, journeyId: 8, mode: "Flight", from: departure,
+            to: connection, intention: "Considering", arrangement: "Not arranged",
+            purchase: nil, operator: "Qantas", service: "QF 7", reference: "QF7 REF",
+            notes: "Terminal 1", sourceLinks: [segmentSource])
+        let secondLeg = TripJourneyLeg(
+            id: 12, journeyId: 8, mode: "Flight", from: connection,
+            to: arrival, intention: "Agreed", arrangement: "Booked",
+            purchase: "Purchased", operator: "American Airlines", service: "AA 963",
+            reference: nil, notes: "", sourceLinks: [])
+        let journey = TripJourney(
+            id: 8, tripId: 1, name: "Sydney to São Paulo", reference: "Journey ref",
+            notes: "Keep the connection receipt", sourceLinks: [],
+            buffers: .init(minimumConnectionMinutes: 360, airportBufferMinutes: nil),
+            legs: [firstLeg, secondLeg])
+
+        let detail = TripJourneyDetailPresentation(journey: journey, places: [])
+        #expect(detail.legs.map(\.ordinal) == [1, 2])
+        #expect(detail.legs.map(\.id) == [11, 12])
+        #expect(detail.legs[0].departure.place == "SYD")
+        let departureInstant = try #require(
+            TripClock.instant(local: departure.local, zone: departure.timeZone))
+        let arrivalInstant = try #require(
+            TripClock.instant(local: connection.local, zone: connection.timeZone))
+        #expect(
+            detail.legs[0].departure.time
+                == TripClock.clockLabel(
+                    departureInstant, zone: try #require(TimeZone(identifier: "Australia/Sydney"))))
+        #expect(detail.legs[0].departure.zone == "Australia/Sydney")
+        #expect(detail.legs[0].arrival.place == "DFW")
+        #expect(
+            detail.legs[0].arrival.time
+                == TripClock.clockLabel(
+                    arrivalInstant, zone: try #require(TimeZone(identifier: "America/Chicago"))))
+        #expect(detail.legs[0].arrival.zone == "America/Chicago")
+        #expect(detail.legs[1].arrival.day == TripClock.dayLabel("2026-11-25"))
+        #expect(detail.legs[1].arrival.time == "Time not set")
+        #expect(detail.legs[0].states.map(\.label) == ["Plan", "Arrangement"])
+        #expect(detail.legs[0].states.map(\.value) == ["Considering", "Not arranged"])
+        #expect(detail.legs[1].states.map(\.label) == ["Plan", "Arrangement", "Purchase"])
+        #expect(detail.legs[1].states.map(\.value) == ["Agreed", "Booked", "Purchased"])
+        #expect(detail.legs[0].operatorName == "Qantas")
+        #expect(detail.legs[0].service == "QF 7")
+        #expect(detail.legs[0].facts.map(\.label) == ["Reference", "Notes"])
+        #expect(detail.legs[0].references.map(\.title) == ["Segment source", "Departure source"])
+        #expect(detail.legs[0].references.map(\.links) == [[segmentSource], [departureSource]])
+        #expect(detail.facts.map(\.value) == ["Journey ref", "Keep the connection receipt"])
+        #expect(detail.buffers.map(\.label) == ["Minimum connection"])
+        #expect(detail.buffers.first?.value.contains("360") == true)
+    }
+
+    @Test("empty journey details add no status, timing, buffer or source facts")
+    internal func emptyJourneyDetail() {
+        let journey = TripJourney(
+            id: 8, tripId: 1, name: nil, reference: nil, notes: "", sourceLinks: [],
+            buffers: .init(minimumConnectionMinutes: nil, airportBufferMinutes: nil), legs: [])
+        let detail = TripJourneyDetailPresentation(journey: journey, places: [])
+
+        #expect(detail.legs.isEmpty)
+        #expect(detail.facts.isEmpty)
+        #expect(detail.buffers.isEmpty)
+        #expect(detail.references.isEmpty)
+    }
+
     @Test(
         "leg reference groups retain endpoint provenance and duplicate links without resolving their URI"
     )

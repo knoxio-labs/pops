@@ -133,3 +133,67 @@ internal struct TripSourceDetailLegPresentation {
         ].filter { !$0.links.isEmpty }
     }
 }
+
+internal struct TripJourneyLegDetailPresentation: Identifiable {
+    internal let id: Int
+    internal let ordinal: Int
+    internal let departure: TripEndpointPresentation
+    internal let arrival: TripEndpointPresentation
+    internal let mode: String?
+    internal let operatorName: String?
+    internal let service: String?
+    internal let states: [TripSourceDetailFact]
+    internal let facts: [TripSourceDetailFact]
+    internal let references: [TripSourceDetailReferenceGroup]
+
+    internal init(leg: TripJourneyLeg, ordinal: Int, places: [TripPlace]) {
+        id = leg.id
+        self.ordinal = ordinal
+        departure = TripEndpointPresentation(endpoint: leg.from, role: "Departure", places: places)
+        arrival = TripEndpointPresentation(endpoint: leg.to, role: "Arrival", places: places)
+        mode = leg.mode.flatMap { $0.isEmpty ? nil : $0 }
+        operatorName = leg.operator.flatMap { $0.isEmpty ? nil : $0 }
+        service = leg.service.flatMap { $0.isEmpty ? nil : $0 }
+        states = [
+            TripSourceDetailFact("Plan", leg.intention),
+            TripSourceDetailFact("Arrangement", leg.arrangement),
+            TripSourceDetailFact("Purchase", leg.purchase),
+        ].compactMap { $0 }
+        facts = [
+            TripSourceDetailFact("Reference", leg.reference),
+            TripSourceDetailFact("Notes", leg.notes),
+        ].compactMap { $0 }
+        references = [
+            TripSourceDetailReferenceGroup(title: "Segment source", links: leg.sourceLinks),
+            .init(title: "Departure source", links: leg.from.sourceLinks ?? []),
+            .init(title: "Arrival source", links: leg.to.sourceLinks ?? []),
+        ].filter { !$0.links.isEmpty }
+    }
+}
+
+internal struct TripJourneyDetailPresentation {
+    internal let legs: [TripJourneyLegDetailPresentation]
+    internal let facts: [TripSourceDetailFact]
+    internal let buffers: [TripSourceDetailFact]
+    internal let references: [TripSourceDetailReferenceGroup]
+
+    internal init(journey: TripJourney, places: [TripPlace]) {
+        legs = journey.legs.enumerated().map { index, leg in
+            TripJourneyLegDetailPresentation(leg: leg, ordinal: index + 1, places: places)
+        }
+        facts = [
+            TripSourceDetailFact("Booking reference", journey.reference),
+            TripSourceDetailFact("Notes", journey.notes),
+        ].compactMap { $0 }
+        buffers = [
+            TripSourceDetailFact(
+                "Minimum connection",
+                journey.buffers.minimumConnectionMinutes.map { "\($0.formatted(.number)) min" }),
+            TripSourceDetailFact(
+                "Airport buffer",
+                journey.buffers.airportBufferMinutes.map { "\($0.formatted(.number)) min" }),
+        ].compactMap { $0 }
+        references = journey.sourceLinks.isEmpty
+            ? [] : [.init(title: "Journey source", links: journey.sourceLinks)]
+    }
+}
