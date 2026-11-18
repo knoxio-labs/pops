@@ -7,19 +7,28 @@ internal struct TripsChapterRail: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     internal var body: some View {
-        Group {
-            if typeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                    ForEach(chapters) { chapter($0) }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: PopsSpacing.sm) {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("The route").font(.popsTitle)
+                Spacer()
+                Text(chapters.count == 1 ? "1 stop" : "\(chapters.count) stops")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+            Group {
+                if typeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                         ForEach(chapters) { chapter($0) }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: PopsSpacing.sm) {
+                            ForEach(chapters) { chapter($0) }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
                 }
-                .scrollIndicators(.hidden)
             }
         }
         .listRowSeparator(.hidden)
