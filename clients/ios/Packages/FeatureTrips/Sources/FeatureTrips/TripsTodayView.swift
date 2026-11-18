@@ -90,23 +90,23 @@ internal struct TripsTodayContent: View {
     @ViewBuilder private func nextFocus(_ projection: TripOverviewProjection) -> some View {
         if let next = projection.nextFocus.first {
             TripsTodayFocusCard(
-                source: next, title: "Up next", detail: dateLabel(next),
-                snapshot: snapshot, zone: zone)
+                source: next, title: "Up next", snapshot: snapshot, zone: zone,
+                isCurrent: false)
         }
     }
 
     @ViewBuilder private func currentFocus(_ sources: [TripSource]) -> some View {
         if let source = sources.first, sources.count == 1 {
             TripsTodayFocusCard(
-                source: source, title: "Happening now", detail: "In progress",
-                snapshot: snapshot, zone: zone)
+                source: source, title: "Happening now", snapshot: snapshot, zone: zone,
+                isCurrent: true)
         } else if !sources.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 Text("Happening now").font(.popsTitle)
                 ForEach(sources) { source in
                     TripsTodayFocusCard(
-                        source: source, title: "Now", detail: dateLabel(source),
-                        snapshot: snapshot, zone: zone)
+                        source: source, title: "Now", snapshot: snapshot, zone: zone,
+                        isCurrent: true)
                 }
             }
         }
@@ -134,66 +134,5 @@ internal struct TripsTodayContent: View {
                 Text(snapshot.trip.notes).font(.popsBody).textSelection(.enabled)
             }
         }
-    }
-
-    private func dateLabel(_ source: TripSource) -> String {
-        guard let start = source.start else { return "Time not set" }
-        return
-            "\(TripClock.dateLabel(start, zone: zone)) · \(TripClock.clockLabel(start, zone: zone))"
-    }
-}
-
-private struct TripsTodayFocusCard: View {
-    let source: TripSource
-    let title: String
-    let detail: String
-    let snapshot: TripSnapshot
-    let zone: TimeZone
-
-    private var accent: Color { TripsSourceStyle(source: source).accent }
-
-    var body: some View {
-        NavigationLink {
-            TripsSourceView(source: source, places: snapshot.places)
-        } label: {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                HStack(spacing: PopsSpacing.sm) {
-                    Image(systemName: source.symbol).font(.popsHeadline)
-                    Text(title.uppercased()).font(.popsSectionLabel)
-                    Spacer()
-                    Image(systemName: "arrow.up.right").font(.popsCaption)
-                }
-                Text(source.displayName(places: snapshot.places))
-                    .font(.popsLargeTitle).fixedSize(horizontal: false, vertical: true)
-                Text(detail).font(.popsSubheadline)
-                if !source.summary.isEmpty {
-                    Text(source.summary).font(.popsBody)
-                }
-                if let status = source.status {
-                    Label(
-                        status,
-                        systemImage: status == "Purchased" ? "checkmark.circle.fill" : "circle"
-                    )
-                    .font(.popsSubheadline)
-                }
-                TripSourceStateLines(source: source)
-            }
-            .foregroundStyle(Color.popsForeground)
-            .padding(PopsSpacing.xl)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .fill(
-                        LinearGradient(
-                            colors: [accent.opacity(0.2), Color.popsSurface],
-                            startPoint: .topLeading, endPoint: .bottomTrailing))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(accent.opacity(0.35), lineWidth: PopsBorder.hairline)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
     }
 }
