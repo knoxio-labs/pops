@@ -116,24 +116,6 @@ extension TripSourceDetailPresentation {
     }
 }
 
-internal struct TripSourceDetailLegPresentation {
-    internal let facts: [TripSourceDetailFact]
-    internal let references: [TripSourceDetailReferenceGroup]
-
-    internal init(leg: TripJourneyLeg) {
-        facts = [
-            TripSourceDetailFact("Mode", leg.mode),
-            TripSourceDetailFact("Reference", leg.reference),
-            TripSourceDetailFact("Notes", leg.notes),
-        ].compactMap { $0 }
-        references = [
-            TripSourceDetailReferenceGroup(title: "Leg source", links: leg.sourceLinks),
-            .init(title: "Departure references", links: leg.from.sourceLinks ?? []),
-            .init(title: "Arrival references", links: leg.to.sourceLinks ?? []),
-        ].filter { !$0.links.isEmpty }
-    }
-}
-
 internal struct TripJourneyLegDetailPresentation: Identifiable {
     internal let id: Int
     internal let ordinal: Int

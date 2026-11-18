@@ -109,14 +109,13 @@ internal struct TripSourceDetailTests {
             snapshot.journeys.first { journey in
                 journey.legs.contains { $0.purchase == "Purchased" }
             })
-        let detail = TripSourceDetailPresentation(source: .journey(journey))
-        #expect(detail.kind == "Journey")
-        #expect(detail.states.isEmpty)
-        #expect(detail.timings.isEmpty)
+        let detail = TripJourneyDetailPresentation(journey: journey, places: snapshot.places)
+        #expect(detail.legs.count == journey.legs.count)
+        #expect(detail.facts.allSatisfy { $0.label != "Purchase" })
         let leg = try #require(journey.legs.first)
-        #expect(leg.purchase == "Purchased")
-        let legDetail = TripSourceDetailLegPresentation(leg: leg)
-        #expect(legDetail.facts.first { $0.label == "Mode" }?.value == leg.mode)
+        let legDetail = try #require(detail.legs.first { $0.id == leg.id })
+        #expect(legDetail.states.first { $0.label == "Purchase" }?.value == "Purchased")
+        #expect(legDetail.mode == leg.mode)
         #expect(legDetail.facts.first { $0.label == "Reference" }?.value == leg.reference)
         #expect(legDetail.references.isEmpty)
         #expect(journey.legs == snapshot.journeys.first { $0.id == journey.id }?.legs)
@@ -215,11 +214,13 @@ internal struct TripSourceDetailTests {
             intention: "Considering", arrangement: "Not arranged", purchase: "Purchased",
             operator: nil, service: nil, reference: " REF ", notes: "Exact notes",
             sourceLinks: [link])
-        let detail = TripSourceDetailLegPresentation(leg: leg)
-        #expect(detail.facts.map(\.value) == ["Recorded mode", " REF ", "Exact notes"])
+        let detail = TripJourneyLegDetailPresentation(leg: leg, ordinal: 1, places: [])
+        #expect(detail.mode == "Recorded mode")
+        #expect(detail.facts.map(\.value) == [" REF ", "Exact notes"])
+        #expect(detail.states.map(\.value) == ["Considering", "Not arranged", "Purchased"])
         #expect(
             detail.references.map(\.title) == [
-                "Leg source", "Departure references", "Arrival references",
+                "Segment source", "Departure source", "Arrival source",
             ])
         #expect(detail.references.map(\.links) == [[link], [link, link], [link]])
         #expect(leg.from.date == "2026-02-02")
@@ -237,17 +238,29 @@ internal struct TripSourceDetailTests {
         }
     }
 
-    @Test("leg headings follow published order while sparse database IDs remain identity only")
+    @Test("journey leg headings follow published order while sparse database IDs remain identity only")
     internal func orderedLegHeadings() {
         let legs = [leg(id: 92_010, service: "Z9"), leg(id: 8, service: "A1")]
-        let positioned = TripSourceDetailLegPosition.ordered(legs)
-        #expect(positioned.map(\.heading) == ["Leg 1", "Leg 2"])
-        #expect(positioned.map(\.id) == [92_010, 8])
-        #expect(positioned.map(\.leg) == legs)
-        let reversed = TripSourceDetailLegPosition.ordered(Array(legs.reversed()))
-        #expect(reversed.map(\.heading) == ["Leg 1", "Leg 2"])
-        #expect(reversed.map(\.id) == [8, 92_010])
-        #expect(TripSourceDetailLegPosition.ordered([]).isEmpty)
+        let journey = TripJourney(
+            id: 4, tripId: 1, name: nil, reference: nil, notes: "", sourceLinks: [],
+            buffers: .init(minimumConnectionMinutes: nil, airportBufferMinutes: nil),
+            legs: legs)
+        let detail = TripJourneyDetailPresentation(journey: journey, places: [])
+        #expect(detail.legs.map(\.ordinal) == [1, 2])
+        #expect(detail.legs.map(\.id) == [92_010, 8])
+        #expect(detail.legs.map(\.service) == ["Z9", "A1"])
+
+        let reversedJourney = TripJourney(
+            id: 4, tripId: 1, name: nil, reference: nil, notes: "", sourceLinks: [],
+            buffers: .init(minimumConnectionMinutes: nil, airportBufferMinutes: nil),
+            legs: Array(legs.reversed()))
+        let reversed = TripJourneyDetailPresentation(journey: reversedJourney, places: [])
+        #expect(reversed.legs.map(\.ordinal) == [1, 2])
+        #expect(reversed.legs.map(\.id) == [8, 92_010])
+        let emptyJourney = TripJourney(
+            id: 4, tripId: 1, name: nil, reference: nil, notes: "", sourceLinks: [],
+            buffers: .init(minimumConnectionMinutes: nil, airportBufferMinutes: nil), legs: [])
+        #expect(TripJourneyDetailPresentation(journey: emptyJourney, places: []).legs.isEmpty)
     }
 
     private func leg(id: Int, service: String) -> TripJourneyLeg {
