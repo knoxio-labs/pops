@@ -103,9 +103,9 @@ internal struct TripPlacePinRepositoryTests {
 
     private static func placeJSON(id: Int = 11, pin: String) -> String {
         """
-            {"id":\(id),"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z",
-            "updatedAt":"2028-01-02T00:00:00Z","pin":\(pin)}
-            """
+        {"id":\(id),"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z",
+        "updatedAt":"2028-01-02T00:00:00Z","pin":\(pin)}
+        """
     }
 
     private static func response(
