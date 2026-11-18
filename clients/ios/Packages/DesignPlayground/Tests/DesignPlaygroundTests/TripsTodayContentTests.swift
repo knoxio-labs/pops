@@ -8,6 +8,18 @@ import ViewInspector
 @Suite("Today focus and plan")
 @MainActor
 internal struct TripsTodayContentTests {
+    @Test("Today does not offer route navigation until the canonical route is loaded")
+    internal func routeActionsWaitForRoute() throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        let date = try #require(TripClock.instant(local: "2026-01-01T12:00", zone: "UTC"))
+        let inspected = try TripsTodayContent(snapshot: snapshot, date: date, route: nil)
+            .environment(\.timeZone, .gmt)
+            .inspect()
+
+        #expect(inspected.findAll(TripsChapterRail.self).isEmpty)
+        #expect(inspected.findAll(TripsTodayNeedsYouView.self).isEmpty)
+    }
+
     @Test("Today promotes the first future source and excludes it from the four later rows")
     internal func nextFocusDoesNotRepeat() throws {
         let original = try TripNavigationTestContext.snapshot()

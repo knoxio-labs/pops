@@ -56,7 +56,7 @@ internal struct TripsTodayContent: View {
                 } else if projection.next.isEmpty {
                     breathingRoom
                 }
-                if !projection.chapters.isEmpty {
+                if route != nil, !projection.chapters.isEmpty {
                     TripsChapterRail(chapters: projection.chapters) {
                         selectPlanVisit($0)
                     }
