@@ -6,7 +6,7 @@ import { captureSource } from '../capture/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
 import { meetingPlan } from '../people/test-utils';
 import { routeRead } from '../route/test-utils';
-import { sourceStay, sourceVisits } from '../stay/test-utils';
+import { sourcePlaces, sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview as mount } from './render.test-utils';
 import { overviewLabels, overviewResponses, overviewTrip } from './test-utils';
 
@@ -15,6 +15,47 @@ import type { ContactsHostCapability } from '@pops/pillar-sdk';
 afterEach(cleanup);
 
 describe('source-backed TripOverview', () => {
+  it('summarises distinct resolved route destinations in their recorded order', async () => {
+    const responses = overviewResponses();
+    const visit = sourceVisits[0];
+    const place = sourcePlaces[0];
+    if (!visit || !place) throw new Error('Expected route fixtures');
+    responses.set('/trips/7/visits', {
+      visits: [visit, { ...visit, id: 32, placeId: 52 }, { ...visit, id: 33 }],
+    });
+    responses.set('/places', {
+      places: [place, { ...place, id: 52, name: 'Auckland' }],
+    });
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [
+          { kind: 'visit', id: 32 },
+          { kind: 'visit', id: 31 },
+          { kind: 'visit', id: 33 },
+        ],
+      })
+    );
+    mount(responses);
+
+    const summary = await screen.findByRole('list', { name: 'workspace.destinations' });
+    const destinations = within(summary)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent?.replace('·', '').trim());
+    expect(destinations).toEqual(['Auckland', 'Wellington']);
+  });
+
+  it('uses the explicitly recorded Trip destination when no route place resolves', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7', { ...overviewTrip, destination: 'Patagonia' });
+    responses.set('/places', { places: [] });
+    mount(responses);
+
+    expect(await screen.findByRole('list', { name: 'workspace.destinations' })).toHaveTextContent(
+      'Patagonia'
+    );
+  });
+
   it('keeps quick capture inside the selected Trip workspace', async () => {
     mount(overviewResponses(), undefined, { captureComposer: <p>Trip capture</p> });
     expect(await screen.findByText('Trip capture')).toBeVisible();

@@ -230,6 +230,7 @@
         "needs-attention": "Needs attention",
         "booked": "Booked",
         "noRouteResults": "No route entries match those filters.",
+        "destinations": "Route destinations",
         "beforeYouGo": "Before you go",
         "tripCheck": "A few things to settle",
         "openNights": "Open nights",
