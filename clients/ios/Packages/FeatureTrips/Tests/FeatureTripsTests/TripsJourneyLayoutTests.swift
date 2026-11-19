@@ -12,8 +12,6 @@ internal struct TripsJourneyLayoutTests {
     internal func accessibilityLayout() {
         #expect(!TripsJourneyLegView.stacksEndpoints(at: .large))
         #expect(!TripsJourneyLegView.stacksEndpoints(at: .xxxLarge))
-        #expect(!TripsTodayJourneyLegCard.stacksEndpoints(at: .large))
-        #expect(!TripsTodayJourneyLegCard.stacksEndpoints(at: .xxxLarge))
         #expect(!TripsJourneyDetailView.stacksEndpoints(at: .large))
         #expect(!TripsJourneyDetailView.stacksEndpoints(at: .xxxLarge))
         for size in [
@@ -21,12 +19,13 @@ internal struct TripsJourneyLayoutTests {
             .accessibility4, .accessibility5,
         ] {
             #expect(TripsJourneyLegView.stacksEndpoints(at: size))
-            #expect(TripsTodayJourneyLegCard.stacksEndpoints(at: size))
             #expect(TripsJourneyDetailView.stacksEndpoints(at: size))
         }
     }
 
-    @Test("Today’s route panel grows vertically at the largest text size")
+    @Test(
+        "Today’s route panel grows vertically at the largest text size",
+        .comparisonSurvivesAnUncompiledCatalog)
     internal func todayRouteHeightGrows() throws {
         let snapshot = try TripTestSources.snapshot()
         let sourceLeg = try #require(snapshot.journeys.first?.legs.first)

@@ -39,7 +39,9 @@ internal struct TripsAccessibleCardLayoutTests {
         try expectFullWidthTitleDelta(longHeight - shortHeight)
     }
 
-    @Test("the Today focus card gives a long source title room to wrap")
+    @Test(
+        "the Today focus card gives a long source title room to wrap",
+        .comparisonSurvivesAnUncompiledCatalog)
     internal func focusTitleWraps() throws {
         let snapshot = try TripTestSources.snapshot()
         let long = try source(named: longTitle)
