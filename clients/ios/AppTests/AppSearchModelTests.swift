@@ -103,7 +103,7 @@ internal struct AppSearchModelTests {
     func changingScopeSwitchesProvider() async {
         let inventory = InventoryFake(
             pillar: .inventory,
-            scripts: ["socket": [[Self.step(.results(Self.page([1])), after: .milliseconds(80))]]])
+            scripts: ["socket": [[Self.step(.results(Self.page([1])), after: .seconds(10))]]])
         let purchases = PurchasesFake(
             pillar: .purchases,
             scripts: [

@@ -1,6 +1,10 @@
 appId: com.knoxiolabs.pops.local
 name: Select Transactions from More
 ---
-- tapOn:
-    id: 'more-tab'
+- runFlow:
+    when:
+      notVisible: 'Transactions'
+    commands:
+      - tapOn:
+          id: 'more-tab'
 - tapOn: 'Transactions'
