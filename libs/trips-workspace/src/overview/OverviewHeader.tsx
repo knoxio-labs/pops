@@ -1,6 +1,6 @@
 import { Button, PageHeader } from '@pops/ui';
 
-import { routeDateRange } from './route-context';
+import { resolvedVisit, routeDateRange } from './route-context';
 
 import type { JSX } from 'react';
 
@@ -11,6 +11,7 @@ export function OverviewHeader(props: OverviewViewProps): JSX.Element {
   const { trip } = props;
   const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
   const bounds = routeDateRange(props.projection, props.locale);
+  const destinations = routeDestinations(props);
   return (
     <>
       <PageHeader
@@ -24,9 +25,45 @@ export function OverviewHeader(props: OverviewViewProps): JSX.Element {
         backHref={props.backHref}
         actions={<OverviewActions {...props} />}
       />
-      {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}
+      {(bounds || destinations.length > 0) && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          {bounds && <span>{bounds}</span>}
+          {bounds && destinations.length > 0 && <span aria-hidden>·</span>}
+          {destinations.length > 0 && (
+            <ol
+              aria-label={props.labels.status('workspace.destinations')}
+              className="inline-flex flex-wrap gap-x-2"
+            >
+              {destinations.map((destination, index) => (
+                <li key={destination.key} className="inline-flex items-center gap-2">
+                  {index > 0 && <span aria-hidden>·</span>}
+                  {destination.name}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
     </>
   );
+}
+
+function routeDestinations(props: OverviewViewProps): { key: string; name: string }[] {
+  const seen = new Set<number>();
+  const destinations = (props.projection?.order ?? []).flatMap((item) => {
+    if (
+      !resolvedVisit(item) ||
+      item.source.tripId !== props.tripId ||
+      seen.has(item.source.placeId)
+    )
+      return [];
+    const place = props.sources.places?.find(({ id }) => id === item.source.placeId);
+    if (!place?.name.trim()) return [];
+    seen.add(place.id);
+    return [{ key: `place:${place.id}`, name: place.name.trim() }];
+  });
+  if (destinations.length > 0 || !props.trip.destination.trim()) return destinations;
+  return [{ key: 'trip-destination', name: props.trip.destination.trim() }];
 }
 
 function OverviewActions(props: TripOverviewProps): JSX.Element {
