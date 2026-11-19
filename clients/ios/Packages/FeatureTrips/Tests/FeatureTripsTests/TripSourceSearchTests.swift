@@ -20,6 +20,12 @@ internal struct TripSourceSearchTests {
 
         let alternate = try #require(snapshot.journeys.first { $0.id == 2 })
         #expect(!TripsSearchFilter.flights.includes(.journey(alternate)))
+        #expect(
+            tripSearchSourceDetail(.journey(alternate), snapshot: snapshot)?.contains(
+                "Alternative journey") == true)
+        #expect(
+            tripSearchSourceDetail(source, snapshot: snapshot)?.contains("Alternative journey")
+                != true)
     }
 
     @Test("stay and calendar search cover their exact dates, states, and references")

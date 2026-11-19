@@ -105,7 +105,8 @@ internal struct TripsSearchResultGroups: View {
         let style = TripsSourceStyle(source: source)
         let content = TripsSearchCardContent(
             title: source.displayName(places: snapshot?.places ?? []),
-            category: style.kind.uppercased(), detail: source.summary,
+            category: style.kind.uppercased(),
+            detail: tripSearchSourceDetail(source, snapshot: snapshot),
             symbol: style.symbol, accent: style.accent)
         return resultCard(content, hint: "Opens this booking") {
             openSource(source)

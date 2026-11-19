@@ -119,6 +119,17 @@ internal func isFlightJourney(_ source: TripSource) -> Bool {
     }
 }
 
+internal func tripSearchSourceDetail(_ source: TripSource, snapshot: TripSnapshot?) -> String? {
+    var details = [source.summary]
+    if let snapshot, source.isAlternative(in: snapshot) {
+        details.append("Alternative journey")
+    }
+    let visibleDetails = details.filter {
+        !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    return visibleDetails.isEmpty ? nil : visibleDetails.joined(separator: " · ")
+}
+
 private func linkFields(_ links: [TripSourceLink]) -> [String] {
     links.flatMap { [$0.label, $0.uri].compactMap { $0 } }
 }
