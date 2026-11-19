@@ -69,8 +69,15 @@ internal struct TripsTodayContent: View {
                         selectPlanTarget($0.target)
                     }
                 }
-                upcoming(projection.next, excluding: projection.nextFocus.isEmpty ? 0 : 1)
-                if !projection.other.isEmpty { unscheduled(projection.other) }
+                if !projection.timeline.isEmpty {
+                    VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                        Text("The journey").font(.popsTitle)
+                        ForEach(projection.timeline) { group in
+                            TripsTimelineGroupView(
+                                group: group, places: snapshot.places, zone: zone)
+                        }
+                    }
+                }
                 if !snapshot.trip.notes.isEmpty { notes }
             }
             .padding(.horizontal, PopsSpacing.lg)
@@ -115,32 +122,6 @@ internal struct TripsTodayContent: View {
                     Text("Nothing is happening right now. Your trip plan is here when you need it.")
                         .font(.popsSubheadline).foregroundStyle(Color.popsMutedForeground)
                 }
-            }
-        }
-    }
-
-    @ViewBuilder private func upcoming(_ sources: [TripSource], excluding count: Int) -> some View {
-        let items = Array(sources.dropFirst(count).prefix(4))
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Coming up").font(.popsTitle)
-                    Spacer()
-                    Text("\(sources.count) planned")
-                        .font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
-                }
-                ForEach(items) { source in
-                    TripsTodaySourceCard(source: source, snapshot: snapshot, zone: zone)
-                }
-            }
-        }
-    }
-
-    private func unscheduled(_ sources: [TripSource]) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            Text("Still in your plan").font(.popsTitle)
-            ForEach(sources.prefix(3)) { source in
-                TripsTodaySourceCard(source: source, snapshot: snapshot, zone: zone)
             }
         }
     }
@@ -214,54 +195,5 @@ private struct TripsTodayFocusCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-    }
-}
-
-private struct TripsTodaySourceCard: View {
-    let source: TripSource
-    let snapshot: TripSnapshot
-    let zone: TimeZone
-
-    private var accent: Color { TripsSourceStyle(source: source).accent }
-
-    var body: some View {
-        NavigationLink {
-            TripsSourceView(source: source, places: snapshot.places)
-        } label: {
-            HStack(alignment: .top, spacing: PopsSpacing.md) {
-                Image(systemName: source.symbol)
-                    .font(.popsHeadline).foregroundStyle(accent)
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                    .background(accent.opacity(0.12), in: Circle())
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    Text(source.displayName(places: snapshot.places)).font(.popsHeadline)
-                        .foregroundStyle(Color.popsForeground)
-                    Text(source.summary.isEmpty ? date : source.summary)
-                        .font(.popsSubheadline).foregroundStyle(Color.popsMutedForeground)
-                    if let status = source.status {
-                        Text(status).font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
-                    }
-                }
-                Spacer(minLength: PopsSpacing.xs)
-                Image(systemName: "chevron.right").font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .frame(minHeight: PopsSize.touchTarget)
-            }
-            .padding(PopsSpacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var date: String {
-        guard let start = source.start else { return "Date not set" }
-        return
-            "\(TripClock.dateLabel(start, zone: zone)) · \(TripClock.clockLabel(start, zone: zone))"
     }
 }

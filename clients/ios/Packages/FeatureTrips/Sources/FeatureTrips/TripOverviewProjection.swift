@@ -90,6 +90,7 @@ internal struct TripOverviewProjection {
     internal let other: [TripSource]
     internal let chapters: [TripOverviewChapter]
     internal let attention: [TripOverviewAttention]
+    internal let timeline: [TripTimelineGroup]
 
     internal var nextFocus: [TripSource] {
         guard let start = next.first?.start else { return [] }
@@ -134,6 +135,9 @@ internal struct TripOverviewProjection {
                 }
             } ?? []
         let selected = tripSources(snapshot).filter { visible.contains($0.id) }
+        timeline = tripTimelineGroups(
+            snapshot: snapshot, sources: selected, visits: chapterVisits, grouping: .day,
+            zone: zone)
         heading = tripOverviewHeading(
             snapshot: snapshot, at: instant, zone: zone, focus: (now, next),
             travel: tripTravelDaySource(selected, at: instant, zone: zone))
