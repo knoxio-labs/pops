@@ -5,7 +5,7 @@ name: Pair this simulator through the host handoff
     file: ../scripts/pair-this-simulator.js
 
 - tapOn:
-    text: 'Open in “Pops Local”\?'
+    text: Open
     optional: true
 
 - runScript:
