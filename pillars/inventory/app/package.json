@@ -42,7 +42,7 @@
     "recharts": "^3.10.1",
     "rehype-sanitize": "^6.0.0",
     "sonner": "^2.0.8",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
