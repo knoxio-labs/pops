@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystemTestSupport
 import SwiftUI
 import Testing
@@ -20,6 +21,47 @@ internal struct TripsJourneyLayoutTests {
             #expect(TripsJourneyLegView.stacksEndpoints(at: size))
             #expect(TripsJourneyDetailView.stacksEndpoints(at: size))
         }
+    }
+
+    @Test(
+        "Today’s route panel grows vertically at the largest text size",
+        .comparisonSurvivesAnUncompiledCatalog)
+    internal func todayRouteHeightGrows() throws {
+        let snapshot = try TripTestSources.snapshot()
+        let sourceLeg = try #require(snapshot.journeys.first?.legs.first)
+        let leg = TripJourneyLeg(
+            id: sourceLeg.id,
+            journeyId: sourceLeg.journeyId,
+            mode: "flight",
+            from: TripEndpoint(
+                placeId: nil, sourceLabel: "Sydney", sourceLinks: nil,
+                local: "2026-02-01T12:00", timeZone: "UTC"),
+            to: TripEndpoint(
+                placeId: nil, sourceLabel: "Dallas", sourceLinks: nil,
+                local: "2026-02-01T14:00", timeZone: "UTC"),
+            intention: nil,
+            arrangement: nil,
+            purchase: nil,
+            operator: nil,
+            service: nil,
+            reference: nil,
+            notes: "",
+            sourceLinks: [])
+        let regular = ImageRenderer(
+            content: TripsTodayJourneyLegCard(leg: leg, places: snapshot.places)
+                .environment(\.dynamicTypeSize, .large)
+                .frame(width: 320, alignment: .leading))
+        let accessible = ImageRenderer(
+            content: TripsTodayJourneyLegCard(leg: leg, places: snapshot.places)
+                .environment(\.dynamicTypeSize, .accessibility5)
+                .frame(width: 320, alignment: .leading))
+        regular.scale = 1
+        accessible.scale = 1
+        let regularImage = try #require(regular.cgImage)
+        let accessibleImage = try #require(accessible.cgImage)
+        #expect(regularImage.width == 320)
+        #expect(accessibleImage.width == 320)
+        #expect(accessibleImage.height > regularImage.height)
     }
 
     @Test(

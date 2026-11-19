@@ -29,24 +29,18 @@ internal struct TripsTodayFocusCard: View {
             TripsSourceView(source: source, places: snapshot.places)
         } label: {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                HStack(spacing: PopsSpacing.sm) {
-                    Image(systemName: style.symbol)
-                        .font(.popsHeadline)
-                        .foregroundStyle(style.accent)
-                    Text(title.uppercased()).font(.popsSectionLabel)
-                    Spacer()
-                    Image(systemName: "arrow.up.right").font(.popsCaption)
-                }
+                header
                 Text(source.displayName(places: snapshot.places))
                     .font(.popsLargeTitle)
                     .fixedSize(horizontal: false, vertical: true)
                 recordedDetails
                 if let status = source.status, !status.isEmpty {
-                    Label(
-                        status,
-                        systemImage: status == "Purchased" ? "checkmark.circle.fill" : "circle"
-                    )
-                    .font(.popsSubheadline)
+                    Text(status)
+                        .font(.popsCaption)
+                        .foregroundStyle(style.accent)
+                        .padding(.horizontal, PopsSpacing.md)
+                        .padding(.vertical, PopsSpacing.xs)
+                        .background(style.accent.opacity(0.14), in: Capsule())
                 }
                 TripSourceStateLines(source: source)
             }
@@ -57,8 +51,13 @@ internal struct TripsTodayFocusCard: View {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
                     .fill(
                         LinearGradient(
-                            colors: [style.accent.opacity(0.2), Color.popsSurface],
-                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                            colors: [
+                                style.accent.opacity(isCurrent ? 0.24 : 0.16),
+                                Color.popsSurface,
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
@@ -67,6 +66,37 @@ internal struct TripsTodayFocusCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: PopsSpacing.md) {
+            Image(systemName: style.symbol)
+                .font(.popsTitle)
+                .foregroundStyle(style.accent)
+                .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+                .background(
+                    style.accent.opacity(0.14),
+                    in: RoundedRectangle(cornerRadius: PopsRadius.control)
+                )
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text(title.uppercased())
+                    .font(.popsSectionLabel)
+                    .foregroundStyle(style.accent)
+                Text(isCurrent ? "IN PROGRESS" : "COMING UP")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                Text(style.kind)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: PopsSpacing.xs)
+            Image(systemName: "arrow.up.right")
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+                .accessibilityHidden(true)
+        }
     }
 
     @ViewBuilder private var recordedDetails: some View {
@@ -80,7 +110,7 @@ internal struct TripsTodayFocusCard: View {
                     .foregroundStyle(Color.popsMutedForeground)
             } else {
                 ForEach(legs) { leg in
-                    TripsJourneyLegView(leg: leg, places: snapshot.places, showsReference: false)
+                    TripsTodayJourneyLegCard(leg: leg, places: snapshot.places)
                 }
             }
         }
