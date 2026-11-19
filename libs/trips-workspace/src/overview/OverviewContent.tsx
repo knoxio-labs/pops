@@ -1,7 +1,7 @@
-import { skipToken, useQueries } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { arrangementsKey } from '../arrangements/api';
+import { contactReferenceQueryOptions } from '../arrangements/contact-reference-query';
 import { OverviewCalendar } from './OverviewCalendar';
 import { OverviewDetached } from './OverviewDetached';
 import { OverviewHeader } from './OverviewHeader';
@@ -24,13 +24,17 @@ export function OverviewContent(props: OverviewViewProps): JSX.Element {
   const [display, setDisplay] = useState<OverviewDisplay>('sheet');
   const [filter, setFilter] = useState<OverviewFilter>('everything');
   const people = workspacePeople(props);
-  const reader = props.responsibility?.contacts?.readContactReference;
   const contactReads = useQueries({
-    queries: people.map(({ uri }) => ({
-      queryKey: [...arrangementsKey(props), 'contact-reference', uri],
-      queryFn: reader ? ({ signal }) => reader(uri, { signal }) : skipToken,
-      retry: false,
-    })),
+    queries: people.map(({ uri }) =>
+      contactReferenceQueryOptions(
+        {
+          tripId: props.tripId,
+          client: props.client,
+          contacts: props.responsibility?.contacts,
+        },
+        uri
+      )
+    ),
   });
   const workspaceContactNames = new Map<string, string>();
   for (const [index, person] of people.entries()) {

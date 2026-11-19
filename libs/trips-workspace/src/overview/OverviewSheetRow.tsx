@@ -158,14 +158,11 @@ function JourneyRow(
     item: Extract<ProjectedRouteSource, { state: 'resolved'; reference: { kind: 'journey' } }>;
   }
 ): JSX.Element {
-  const name = props.item.source.name;
   return (
     <OverviewSheetSourceRow
       props={props}
       source={props.item.reference}
-      title={
-        name && name.trim().length > 0 ? name : props.labels.source('journey', props.item.source.id)
-      }
+      title={props.item.source.name || props.labels.source('journey', props.item.source.id)}
       when={props.labels.sheet.unknownDate}
       statuses={[]}
     />

@@ -1,8 +1,8 @@
-import { skipToken, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@pops/ui';
 
-import { arrangementsKey } from './api';
+import { contactReferenceQueryOptions } from './contact-reference-query';
 
 import type { JSX } from 'react';
 
@@ -21,11 +21,7 @@ export function ContactReference({
   interactive?: boolean;
 }): JSX.Element {
   const reader = identity.contacts?.readContactReference;
-  const query = useQuery<ContactReferenceReadResult>({
-    queryKey: [...arrangementsKey(identity), 'contact-reference', uri],
-    queryFn: reader ? ({ signal }) => reader(uri, { signal }) : skipToken,
-    retry: false,
-  });
+  const query = useQuery(contactReferenceQueryOptions(identity, uri));
   if (query.isError) return <span>{identity.labels.contactReadError}</span>;
   const result = reader ? query.data : undefined;
   if (result?.status === 'available')
