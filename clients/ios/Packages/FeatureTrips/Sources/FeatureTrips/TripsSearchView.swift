@@ -5,20 +5,20 @@ internal struct TripsSearchView: View {
     internal let trips: [TripRecord]
     internal let snapshot: TripSnapshot?
     @Binding internal var query: String
+    @State private var filter = TripsSearchFilter.all
     @State private var searchPresented = false
     internal let dismissSearch: () -> Void
     internal let selectTrip: (Int) -> Void
     internal let openSource: (TripSource) -> Void
 
     internal var body: some View {
-        List {
-            TripsSearchResults(
-                trips: trips, snapshot: snapshot,
-                selectTrip: selectTrip, openSource: openSource, query: query)
-        }
+        TripsSearchResults(
+            trips: trips, snapshot: snapshot,
+            selectTrip: selectTrip, openSource: openSource, query: query, filter: $filter
+        )
         .searchable(
             text: $query, isPresented: $searchPresented,
-            prompt: "Search Trips and Selected Bookings"
+            prompt: "Flights, places, bookings, ideas"
         )
         #if os(iOS)
             .toolbar {
@@ -26,7 +26,9 @@ internal struct TripsSearchView: View {
             }
         #endif
         .navigationTitle("Search")
-        .onAppear { searchPresented = true }
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+        #endif
         .onChange(of: searchPresented) { wasPresented, presented in
             if wasPresented && !presented { dismissSearch() }
         }
