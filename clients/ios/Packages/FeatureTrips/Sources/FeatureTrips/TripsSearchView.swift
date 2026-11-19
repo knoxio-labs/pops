@@ -5,7 +5,6 @@ internal struct TripsSearchView: View {
     internal let trips: [TripRecord]
     internal let snapshot: TripSnapshot?
     @Binding internal var query: String
-    @State private var filter = TripsSearchFilter.all
     @State private var searchPresented = false
     internal let dismissSearch: () -> Void
     internal let selectTrip: (Int) -> Void
@@ -14,7 +13,7 @@ internal struct TripsSearchView: View {
     internal var body: some View {
         TripsSearchResults(
             trips: trips, snapshot: snapshot,
-            selectTrip: selectTrip, openSource: openSource, query: query, filter: $filter
+            selectTrip: selectTrip, openSource: openSource, query: query
         )
         .searchable(
             text: $query, isPresented: $searchPresented,
