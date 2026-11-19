@@ -7,9 +7,16 @@ internal struct TripEndpointPresentation: Equatable {
     internal let day: String?
     internal let zone: String?
     internal let hasUnresolvedClock: Bool
+    internal let hasRecordedPlace: Bool
+
+    internal var displayPlace: String {
+        hasRecordedPlace ? place : "Place not recorded"
+    }
 
     internal init(endpoint: TripEndpoint, role: String, places: [TripPlace]) {
-        place = tripEndpointName(endpoint, places: places) ?? role
+        let name = tripEndpointName(endpoint, places: places)
+        place = name ?? role
+        hasRecordedPlace = name != nil
         zone = endpoint.timeZone
         if let instant = TripClock.instant(local: endpoint.local, zone: endpoint.timeZone),
             let zone = endpoint.timeZone.flatMap(TimeZone.init(identifier:))

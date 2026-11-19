@@ -11,23 +11,16 @@ internal struct TripsSourceView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 header(detail)
-                if !detail.timings.isEmpty {
-                    TripSourceDetailSchedule(timings: detail.timings)
-                }
                 if case .journey(let journey) = source {
-                    if journey.legs.isEmpty {
-                        PopsCard(appearance: .featured) {
-                            Text("No journey legs recorded")
-                                .foregroundStyle(Color.popsMutedForeground)
-                        }
+                    TripsJourneyDetailView(journey: journey, places: places)
+                } else {
+                    if !detail.timings.isEmpty {
+                        TripSourceDetailSchedule(timings: detail.timings)
                     }
-                    ForEach(TripSourceDetailLegPosition.ordered(journey.legs)) { position in
-                        TripSourceDetailLeg(position: position, places: places)
+                    TripSourceDetailFacts(title: "Booking details", facts: detail.facts)
+                    ForEach(Array(detail.references.enumerated()), id: \.offset) { _, group in
+                        TripSourceDetailReferences(group: group)
                     }
-                }
-                TripSourceDetailFacts(title: "Booking details", facts: detail.facts)
-                ForEach(Array(detail.references.enumerated()), id: \.offset) { _, group in
-                    TripSourceDetailReferences(group: group)
                 }
                 if let start = source.start, let end = source.end, start >= end {
                     Label("Recorded times conflict", systemImage: "exclamationmark.triangle")
