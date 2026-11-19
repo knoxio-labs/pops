@@ -133,10 +133,12 @@ internal struct TripSourceDetailTests {
         let connection = TripEndpoint(
             placeId: nil, sourceLabel: "DFW", sourceLinks: nil,
             local: "2026-11-24T12:30", timeZone: "America/Chicago")
+        let arrivalSource = TripSourceLink(uri: "opaque:arrival", label: "Arrival details")
         let arrival = TripEndpoint(
-            placeId: nil, sourceLabel: "GRU", sourceLinks: nil,
+            placeId: nil, sourceLabel: "GRU", sourceLinks: [arrivalSource],
             local: nil, timeZone: "America/Sao_Paulo", date: "2026-11-25")
         let segmentSource = TripSourceLink(uri: "opaque:segment", label: "Segment ticket")
+        let secondSegmentSource = TripSourceLink(uri: "opaque:second-segment", label: "Second ticket")
         let firstLeg = TripJourneyLeg(
             id: 11, journeyId: 8, mode: "Flight", from: departure,
             to: connection, intention: "Considering", arrangement: "Not arranged",
@@ -146,7 +148,7 @@ internal struct TripSourceDetailTests {
             id: 12, journeyId: 8, mode: "Flight", from: connection,
             to: arrival, intention: "Agreed", arrangement: "Booked",
             purchase: "Purchased", operator: "American Airlines", service: "AA 963",
-            reference: nil, notes: "", sourceLinks: [])
+            reference: nil, notes: "", sourceLinks: [secondSegmentSource])
         let journey = TripJourney(
             id: 8, tripId: 1, name: "Sydney to São Paulo", reference: "Journey ref",
             notes: "Keep the connection receipt", sourceLinks: [],
@@ -181,8 +183,13 @@ internal struct TripSourceDetailTests {
         #expect(detail.legs[0].operatorName == "Qantas")
         #expect(detail.legs[0].service == "QF 7")
         #expect(detail.legs[0].facts.map(\.label) == ["Reference", "Notes"])
-        #expect(detail.legs[0].references.map(\.title) == ["Segment source", "Departure source"])
+        #expect(
+            detail.legs[0].references.map(\.title)
+                == ["Leg 1 · Segment source", "Leg 1 · Departure source"])
         #expect(detail.legs[0].references.map(\.links) == [[segmentSource], [departureSource]])
+        #expect(
+            detail.legs[1].references.map(\.title)
+                == ["Leg 2 · Segment source", "Leg 2 · Arrival source"])
         #expect(detail.facts.map(\.value) == ["Journey ref", "Keep the connection receipt"])
         #expect(detail.buffers.map(\.label) == ["Minimum connection"])
         #expect(detail.buffers.first?.value.contains("360") == true)
@@ -219,11 +226,13 @@ internal struct TripSourceDetailTests {
             sourceLinks: [link])
         let detail = TripJourneyLegDetailPresentation(leg: leg, ordinal: 1, places: [])
         #expect(detail.mode == "Recorded mode")
+        #expect(!detail.arrival.hasRecordedPlace)
+        #expect(detail.arrival.displayPlace == "Place not recorded")
         #expect(detail.facts.map(\.value) == [" REF ", "Exact notes"])
         #expect(detail.states.map(\.value) == ["Considering", "Not arranged", "Purchased"])
         #expect(
             detail.references.map(\.title) == [
-                "Segment source", "Departure source", "Arrival source",
+                "Leg 1 · Segment source", "Leg 1 · Departure source", "Leg 1 · Arrival source",
             ])
         #expect(detail.references.map(\.links) == [[link], [link, link], [link]])
         #expect(leg.from.date == "2026-02-02")

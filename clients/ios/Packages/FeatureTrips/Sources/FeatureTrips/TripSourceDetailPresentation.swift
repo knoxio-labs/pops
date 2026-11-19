@@ -146,9 +146,10 @@ internal struct TripJourneyLegDetailPresentation: Identifiable {
             TripSourceDetailFact("Notes", leg.notes),
         ].compactMap { $0 }
         references = [
-            TripSourceDetailReferenceGroup(title: "Segment source", links: leg.sourceLinks),
-            .init(title: "Departure source", links: leg.from.sourceLinks ?? []),
-            .init(title: "Arrival source", links: leg.to.sourceLinks ?? []),
+            TripSourceDetailReferenceGroup(
+                title: "Leg \(ordinal) · Segment source", links: leg.sourceLinks),
+            .init(title: "Leg \(ordinal) · Departure source", links: leg.from.sourceLinks ?? []),
+            .init(title: "Leg \(ordinal) · Arrival source", links: leg.to.sourceLinks ?? []),
         ].filter { !$0.links.isEmpty }
     }
 }

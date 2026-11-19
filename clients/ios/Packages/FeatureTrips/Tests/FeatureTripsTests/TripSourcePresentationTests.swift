@@ -14,6 +14,8 @@ internal struct TripSourcePresentationTests {
             placeId: nil, sourceLabel: nil, sourceLinks: nil, local: nil, timeZone: nil)
         let value = TripEndpointPresentation(endpoint: endpoint, role: "Departure", places: [])
         #expect(value.place == "Departure")
+        #expect(!value.hasRecordedPlace)
+        #expect(value.displayPlace == "Place not recorded")
         #expect(value.time == "Time not set")
         #expect(value.day == nil)
         #expect(value.zone == nil)

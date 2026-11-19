@@ -138,7 +138,7 @@ internal struct TripsJourneyDetailView: View {
             Text(role.uppercased())
                 .font(.popsSectionLabel)
                 .foregroundStyle(Color.popsTrips)
-            Text(value.place)
+            Text(value.displayPlace)
                 .font(.popsHeadline)
                 .foregroundStyle(Color.popsForeground)
                 .fixedSize(horizontal: false, vertical: true)
@@ -168,7 +168,7 @@ internal struct TripsJourneyDetailView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             [
-                role, value.place, value.time, value.day, value.zone,
+                role, value.displayPlace, value.time, value.day, value.zone,
                 value.hasUnresolvedClock ? "Time cannot be resolved" : nil,
             ]
                 .compactMap { $0 }

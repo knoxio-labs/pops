@@ -55,17 +55,17 @@ internal struct TripsJourneyLayoutTests {
         let regular = ImageRenderer(
             content: TripsJourneyDetailView(journey: journey, places: snapshot.places)
                 .environment(\.dynamicTypeSize, .large)
-                .frame(width: 320, alignment: .leading))
+                .frame(width: 500, alignment: .leading))
         let accessible = ImageRenderer(
             content: TripsJourneyDetailView(journey: journey, places: snapshot.places)
                 .environment(\.dynamicTypeSize, .accessibility5)
-                .frame(width: 320, alignment: .leading))
+                .frame(width: 500, alignment: .leading))
         regular.scale = 1
         accessible.scale = 1
         let regularImage = try #require(regular.cgImage)
         let accessibleImage = try #require(accessible.cgImage)
-        #expect(regularImage.width == 320)
-        #expect(accessibleImage.width == 320)
+        #expect(regularImage.width == 500)
+        #expect(accessibleImage.width == 500)
         #expect(accessibleImage.height > regularImage.height)
     }
 }
