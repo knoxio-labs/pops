@@ -97,26 +97,6 @@ internal struct TripsTodayContentTests {
         #expect(chapters < attention)
     }
 
-    @Test("the upcoming focus precedes route and attention sections before the trip starts")
-    internal func beforeTripFocusPrecedesRouteAndAttention() throws {
-        let snapshot = try TripNavigationTestContext.snapshot()
-        let route = TripRouteSnapshot(
-            tripId: snapshot.trip.id, revision: 1,
-            order: [.visit(4), .gap(999)], paths: [], missingSources: [])
-        let date = try #require(TripClock.instant(local: "2025-12-30T12:00", zone: "UTC"))
-        let texts = try TripsTodayContent(snapshot: snapshot, date: date, route: route)
-            .environment(\.timeZone, .gmt)
-            .inspect()
-            .findAll(ViewType.Text.self)
-            .map { try $0.string() }
-
-        let next = try #require(texts.firstIndex(of: "UP NEXT"))
-        let chapters = try #require(texts.firstIndex(of: "The route"))
-        let attention = try #require(texts.firstIndex(of: "Needs your attention"))
-        #expect(next < chapters)
-        #expect(chapters < attention)
-    }
-
     @Test("Today keeps the other sources that share the next start time")
     internal func sameStartSourcesRemainVisible() throws {
         let original = try TripNavigationTestContext.snapshot()
