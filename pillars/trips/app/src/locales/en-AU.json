@@ -251,7 +251,10 @@
         "covered": "Covered",
         "open": "Open nights",
         "host": "Host",
-        "organiser": "Organiser"
+        "organiser": "Organiser",
+        "peopleOnTrip": "People on this trip",
+        "noLinkedPeople": "No people have been linked to this trip yet.",
+        "responsibilityUnavailable": "Not loaded"
       }
     }
   },

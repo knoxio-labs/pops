@@ -1,8 +1,8 @@
-import { skipToken, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@pops/ui';
 
-import { arrangementsKey } from './api';
+import { contactReferenceQueryOptions } from './contact-reference-query';
 
 import type { JSX } from 'react';
 
@@ -21,13 +21,31 @@ export function ContactReference({
   interactive?: boolean;
 }): JSX.Element {
   const reader = identity.contacts?.readContactReference;
-  const query = useQuery<ContactReferenceReadResult>({
-    queryKey: [...arrangementsKey(identity), 'contact-reference', uri],
-    queryFn: reader ? ({ signal }) => reader(uri, { signal }) : skipToken,
-    retry: false,
-  });
-  if (query.isError) return <span>{identity.labels.contactReadError}</span>;
+  const query = useQuery(contactReferenceQueryOptions(identity, uri));
   const result = reader ? query.data : undefined;
+  return (
+    <ContactReferenceValue
+      identity={identity}
+      result={result}
+      readError={query.isError}
+      interactive={interactive}
+    />
+  );
+}
+
+/** Render an owner-issued Contact read without issuing another read from a workspace row. */
+export function ContactReferenceValue({
+  identity,
+  result,
+  readError = false,
+  interactive = false,
+}: {
+  identity: ArrangementResponsibilityContext;
+  result?: ContactReferenceReadResult;
+  readError?: boolean;
+  interactive?: boolean;
+}): JSX.Element {
+  if (readError) return <span>{identity.labels.contactReadError}</span>;
   if (result?.status === 'available')
     return interactive ? (
       <Button asChild variant="link" className="min-h-11 h-auto whitespace-normal p-0 text-left">

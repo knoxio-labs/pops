@@ -1,6 +1,6 @@
 import { TableCell } from '@pops/ui';
 
-import { ContactReference } from '../arrangements/ContactReference';
+import { ContactReference, ContactReferenceValue } from '../arrangements/ContactReference';
 
 import type { JSX } from 'react';
 
@@ -28,14 +28,25 @@ export function OverviewOwner({
   if (!owner) return <span>{props.labels.sheet.ownerUnset}</span>;
   if (owner.kind === 'self')
     return <span>{props.responsibility?.labels.self ?? props.labels.sheet.self}</span>;
+  return ownerContact(props, owner.uri);
+}
+
+function ownerContact(props: OverviewViewProps, uri: string): JSX.Element {
   if (!props.responsibility) return <span>{props.labels.sheet.contact}</span>;
-  return (
-    <ContactReference
-      identity={{ tripId: props.tripId, client: props.client, ...props.responsibility }}
-      uri={owner.uri}
-      interactive
-    />
-  );
+  const identity = { tripId: props.tripId, client: props.client, ...props.responsibility };
+  const read = props.workspaceContactReferences?.get(uri);
+  if (read)
+    return (
+      <ContactReferenceValue
+        identity={identity}
+        result={read.status === 'resolved' ? read.result : undefined}
+        readError={read.status === 'error'}
+        interactive
+      />
+    );
+  if (props.workspaceContactReferences)
+    return <ContactReferenceValue identity={identity} interactive />;
+  return <ContactReference identity={identity} uri={uri} interactive />;
 }
 
 /** Render the exact owner's responsibility in the Sheet column. */

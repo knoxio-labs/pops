@@ -251,7 +251,10 @@
         "covered": "Coberto",
         "open": "Noites em aberto",
         "host": "Anfitrião",
-        "organiser": "Organizador"
+        "organiser": "Organizador",
+        "peopleOnTrip": "Pessoas nesta viagem",
+        "noLinkedPeople": "Ainda não há pessoas vinculadas a esta viagem.",
+        "responsibilityUnavailable": "Não carregado"
       }
     }
   },

@@ -1,25 +1,64 @@
+import { useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { contactReferenceQueryOptions } from '../arrangements/contact-reference-query';
 import { OverviewCalendar } from './OverviewCalendar';
 import { OverviewDetached } from './OverviewDetached';
 import { OverviewHeader } from './OverviewHeader';
 import { OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
+import { workspacePeople } from './workspace-people-model';
 import { workspaceTextMatches } from './workspace-projection';
 import { WorkspaceAttention } from './WorkspaceAttention';
 import { WorkspaceControls } from './WorkspaceControls';
 import { WorkspaceCoverage } from './WorkspaceCoverage';
+import { WorkspacePeople } from './WorkspacePeople';
 
 import type { JSX } from 'react';
 
-import type { OverviewDisplay, OverviewFilter, OverviewViewProps } from './types';
+import type {
+  OverviewDisplay,
+  OverviewFilter,
+  OverviewViewProps,
+  WorkspaceContactReferenceRead,
+} from './types';
 
 /** Present one searchable, filterable workspace around the selected Trip's canonical Timeline. */
 export function OverviewContent(props: OverviewViewProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [display, setDisplay] = useState<OverviewDisplay>('sheet');
   const [filter, setFilter] = useState<OverviewFilter>('everything');
-  const workspaceProps = workspaceViewProps(props, query, display, filter);
+  const people = workspacePeople(props);
+  const contactReads = useQueries({
+    queries: people.map(({ uri }) =>
+      contactReferenceQueryOptions(
+        {
+          tripId: props.tripId,
+          client: props.client,
+          contacts: props.responsibility?.contacts,
+        },
+        uri
+      )
+    ),
+  });
+  const workspaceContactNames = new Map<string, string>();
+  const workspaceContactReferences = new Map<string, WorkspaceContactReferenceRead>();
+  for (const [index, person] of people.entries()) {
+    const contactRead = contactReads[index];
+    if (!contactRead) continue;
+    const result = contactRead.data;
+    let reference: WorkspaceContactReferenceRead = { status: 'pending' };
+    if (contactRead.isError) reference = { status: 'error' };
+    else if (result) reference = { status: 'resolved', result };
+    workspaceContactReferences.set(person.uri, reference);
+    if (result?.status === 'available') workspaceContactNames.set(person.uri, result.name);
+  }
+  const workspaceProps = workspaceViewProps(
+    { ...props, workspaceContactNames, workspaceContactReferences },
+    query,
+    display,
+    filter
+  );
   return (
     <>
       <OverviewHeader {...props} />
@@ -84,6 +123,7 @@ function WorkspaceBody(props: OverviewViewProps & { filter: OverviewFilter }): J
       </div>
       <aside className="min-w-0 space-y-5 xl:sticky xl:top-6 xl:col-span-4">
         <WorkspaceAttention {...props} />
+        <WorkspacePeople {...props} />
         <OverviewReferences {...props} />
       </aside>
     </div>

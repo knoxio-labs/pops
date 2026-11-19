@@ -3,6 +3,7 @@ import { contextRecords } from './ContextSources';
 import { dateRange, detachedByVisit, detachedRecords } from './model';
 import { overviewRentals } from './OverviewRentals';
 import { renderedVisitReferences } from './route-context';
+import { sourceContactName } from './workspace-people-model';
 import { workspaceRecordVisible } from './workspace-projection';
 
 import type { Stay } from '../stay/types';
@@ -44,6 +45,7 @@ function detachedStays(
         stay.timing.departure,
         dateRange(stay.timing.arrival, stay.timing.departure, props.locale),
         ...stay.hostLinks.flatMap((link) => [link.label, link.uri]),
+        sourceContactName(props, { kind: 'stay', id: stay.id }),
         props.labels.source('stay', stay.id),
       ],
       confirmed:
@@ -74,6 +76,7 @@ function detachedEvents(
         event.timing.end,
         dateRange(event.timing.start, event.timing.end, props.locale),
         props.labels.source('event', event.id),
+        sourceContactName(props, { kind: 'event', id: event.id }),
       ],
       confirmed:
         event.purchase === 'Purchased' ||
@@ -116,6 +119,7 @@ function detachedRentals(
         row.source.end,
         dateRange(row.source.start ?? undefined, row.source.end ?? undefined, props.locale),
         props.labels.source('rental', row.source.id),
+        sourceContactName(props, { kind: 'rental', id: row.source.id }),
       ],
       confirmed: row.source.status === 'Reserved' || row.source.status === 'Purchased',
       needsAttention: missingVisit(row.source.pickupVisitId, props),
@@ -132,6 +136,7 @@ function contextSearchText(
       return [
         record.source.title,
         record.source.contactUri,
+        sourceContactName(props, { kind: 'meeting', id: record.source.id }),
         record.source.notes,
         record.source.intention,
         record.source.agreement,

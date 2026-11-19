@@ -316,6 +316,7 @@ describe('Selected Trip Timeline host', () => {
     const documentsClient = createClient({ baseUrl: 'https://documents.invalid' });
     const contacts: ContactsHostCapability = { createIntent: () => ({ Chooser: () => null }) };
     mount('/7', { client, documentsClient, contacts });
+    expect(observed.overview.mock.lastCall?.[0].responsibility?.contacts).toBe(contacts);
     await userEvent.click(screen.getByRole('button', { name: 'Open visit' }));
     await userEvent.click(screen.getByRole('button', { name: 'Visit 31' }));
     expect(observed.stay.mock.lastCall?.[0]).toEqual(
