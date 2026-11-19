@@ -8,7 +8,20 @@ internal struct TripsSearchResults: View {
     internal let selectTrip: (Int) -> Void
     internal let openSource: (TripSource) -> Void
     internal let query: String
-    @State private var filter = TripsSearchFilter.all
+    @Binding internal var filter: TripsSearchFilter
+
+    internal init(
+        trips: [TripRecord], snapshot: TripSnapshot?, selectTrip: @escaping (Int) -> Void,
+        openSource: @escaping (TripSource) -> Void, query: String,
+        filter: Binding<TripsSearchFilter> = .constant(.all)
+    ) {
+        self.trips = trips
+        self.snapshot = snapshot
+        self.selectTrip = selectTrip
+        self.openSource = openSource
+        self.query = query
+        _filter = filter
+    }
 
     private var sources: [TripSource] {
         guard let snapshot else { return [] }
