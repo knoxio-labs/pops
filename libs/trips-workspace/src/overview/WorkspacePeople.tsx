@@ -13,6 +13,12 @@ export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
   const readsAvailable =
     props.sources.meetings !== undefined && props.sources.responsibilities !== undefined;
   const title = props.labels.status('workspace.peopleOnTrip');
+  let statusMessage: string | undefined;
+  if (!readsAvailable) {
+    statusMessage = props.labels.status('workspace.responsibilityUnavailable');
+  } else if (people.length === 0) {
+    statusMessage = props.labels.status('workspace.noLinkedPeople');
+  }
   const context = {
     tripId: props.tripId,
     client: props.client,
@@ -25,11 +31,9 @@ export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
       className="min-w-0 rounded-2xl border border-trip-line bg-trip-surface p-4 sm:p-5"
     >
       <h2 className="font-trip-display text-lg font-semibold">{title}</h2>
-      {!readsAvailable ? (
-        <p className="mt-2 text-sm leading-relaxed text-trip-muted">
-          {props.labels.status('workspace.responsibilityUnavailable')}
-        </p>
-      ) : people.length > 0 ? (
+      {statusMessage !== undefined ? (
+        <p className="mt-2 text-sm leading-relaxed text-trip-muted">{statusMessage}</p>
+      ) : (
         <ul className="mt-3 divide-y divide-trip-line">
           {people.map((person) => (
             <li
@@ -50,10 +54,6 @@ export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-2 text-sm leading-relaxed text-trip-muted">
-          {props.labels.status('workspace.noLinkedPeople')}
-        </p>
       )}
     </section>
   );

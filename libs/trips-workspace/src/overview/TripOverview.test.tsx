@@ -8,7 +8,7 @@ import { meetingPlan } from '../people/test-utils';
 import { routeRead } from '../route/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview as mount } from './render.test-utils';
-import { overviewResponses, overviewTrip } from './test-utils';
+import { overviewLabels, overviewResponses, overviewTrip } from './test-utils';
 
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
@@ -116,7 +116,7 @@ describe('source-backed TripOverview', () => {
 
     const table = await screen.findByRole('table', { name: 'Sheet' });
     const stay = within(table).getByRole('row', { name: /Cedar guesthouse/ });
-    expect(within(stay).getByText('workspace.responsibilityUnavailable')).toBeVisible();
+    expect(within(stay).getByText('Not loaded')).toBeVisible();
     expect(within(stay).queryByText('Not assigned')).not.toBeInTheDocument();
   });
 

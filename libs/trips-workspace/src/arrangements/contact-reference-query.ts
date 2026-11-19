@@ -34,5 +34,6 @@ export function contactReferenceQueryOptions(
     queryKey: [...arrangementsKey(identity), 'contact-reference', uri] as const,
     queryFn: reader ? ({ signal }) => reader(uri, { signal }) : skipToken,
     retry: false,
+    staleTime: Infinity,
   });
 }
