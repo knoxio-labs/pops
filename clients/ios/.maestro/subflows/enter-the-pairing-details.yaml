@@ -4,11 +4,11 @@ name: Pair this simulator through the host handoff
 - runScript:
     file: ../scripts/pair-this-simulator.js
 
-- runFlow:
-    when:
-      visible: 'Open in “Pops Local”\?'
-    commands:
-      - tapOn: Open
+- extendedWaitUntil:
+    visible: 'Open in “Pops Local”\?'
+    timeout: 10000
+
+- tapOn: Open
 
 - runScript:
     file: ../scripts/await-simulator-pairing.js
