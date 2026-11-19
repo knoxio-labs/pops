@@ -100,11 +100,7 @@ internal enum TripsSearchFilter: String, CaseIterable, Sendable {
     internal func includes(_ source: TripSource) -> Bool {
         switch self {
         case .all: return true
-        case .flights:
-            guard case .journey(let journey) = source else { return false }
-            return journey.legs.contains {
-                $0.mode?.caseInsensitiveCompare("flight") == .orderedSame
-            }
+        case .flights: return isFlightJourney(source)
         case .stays:
             if case .stay = source { return true }
             return false
@@ -113,6 +109,13 @@ internal enum TripsSearchFilter: String, CaseIterable, Sendable {
             return false
         case .places, .trips: return false
         }
+    }
+}
+
+internal func isFlightJourney(_ source: TripSource) -> Bool {
+    guard case .journey(let journey) = source else { return false }
+    return journey.legs.contains {
+        $0.mode?.caseInsensitiveCompare("flight") == .orderedSame
     }
 }
 

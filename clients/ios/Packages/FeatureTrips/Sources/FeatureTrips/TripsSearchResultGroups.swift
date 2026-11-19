@@ -12,10 +12,10 @@ internal struct TripsSearchResultGroups: View {
     internal let selectTrip: (Int) -> Void
     internal let openSource: (TripSource) -> Void
 
-    private var flights: [TripSource] { sources.filter(isFlight) }
+    private var flights: [TripSource] { sources.filter(isFlightJourney) }
 
     private var journeys: [TripSource] {
-        sources.filter { isJourney($0) && !isFlight($0) }
+        sources.filter { isJourney($0) && !isFlightJourney($0) }
     }
 
     private var stays: [TripSource] { sources.filter(isStay) }
@@ -150,13 +150,6 @@ internal struct TripsSearchResultGroups: View {
             .map(TripClock.dayLabel)
         let dateText = dates.joined(separator: " – ")
         return [dateText, visit.notes].filter { !$0.isEmpty }.joined(separator: " · ")
-    }
-
-    private func isFlight(_ source: TripSource) -> Bool {
-        guard case .journey(let journey) = source else { return false }
-        return journey.legs.contains {
-            $0.mode?.caseInsensitiveCompare("flight") == .orderedSame
-        }
     }
 
     private func isJourney(_ source: TripSource) -> Bool {
