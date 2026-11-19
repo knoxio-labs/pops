@@ -6,6 +6,7 @@ import Observation
 @Observable
 internal final class TripsModel {
     internal var searchQuery = ""
+    internal var searchFilter = TripsSearchFilter.all
     private var searchOrigin = TripsTab.today
     internal private(set) var trips: [TripRecord] = []
     internal private(set) var snapshot: TripSnapshot?

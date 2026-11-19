@@ -68,7 +68,8 @@ public struct TripsRootView: View {
             ) {
                 NavigationStack {
                     TripsSearchView(
-                        trips: model.trips, snapshot: model.snapshot, query: $model.searchQuery,
+                        trips: model.trips, snapshot: model.snapshot,
+                        query: $model.searchQuery, filter: $model.searchFilter,
                         dismissSearch: model.dismissSearch
                     ) { id in
                         model.openTrip(id)

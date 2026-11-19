@@ -36,4 +36,34 @@ internal struct TripsNativeSearchTests {
         context.model.searchQuery = ""
         #expect(try context.root.inspect().find(TripsSearchResults.self).actualView().query.isEmpty)
     }
+
+    @Test("the selected search scope filters sources and stays selected as the query changes")
+    internal func filterScopePersistsAcrossQueryChanges() async throws {
+        let context = try await TripNavigationTestContext.make()
+        context.model.tab = .search
+        context.model.searchQuery = "flight"
+        let results = try context.root.inspect().find(TripsSearchResults.self)
+        let buttons = results.findAll(ViewType.Button.self)
+        #expect(buttons.count >= TripsSearchFilter.allCases.count)
+        let flightButton = try #require(
+            buttons.first { button in
+                (try? button.labelView().findAll(ViewType.Text.self).compactMap {
+                    try? $0.string()
+                }.contains("Flights")) == true
+            })
+
+        try flightButton.tap()
+        #expect(context.model.searchFilter == .flights)
+        let flightResults = try context.root.inspect().find(TripsSearchResultGroups.self)
+            .actualView()
+        #expect(!flightResults.sources.isEmpty)
+        #expect(flightResults.sources.allSatisfy(isFlightJourney))
+
+        context.model.searchQuery = try #require(
+            context.first.stays.first(where: { $0.reference != nil })?.reference)
+        let changedQueryResults = try context.root.inspect()
+            .find(TripsSearchResultGroups.self).actualView()
+        #expect(context.model.searchFilter == .flights)
+        #expect(changedQueryResults.sources.isEmpty)
+    }
 }
