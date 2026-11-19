@@ -90,7 +90,7 @@ internal struct TripsTodayContent: View {
     @ViewBuilder private func nextFocus(_ projection: TripOverviewProjection) -> some View {
         if let next = projection.nextFocus.first {
             TripsTodayFocusCard(
-                source: next, title: "Up next", snapshot: snapshot, zone: zone,
+                source: next, title: "Next", snapshot: snapshot, zone: zone,
                 isCurrent: false)
         }
     }
@@ -98,7 +98,7 @@ internal struct TripsTodayContent: View {
     @ViewBuilder private func currentFocus(_ sources: [TripSource]) -> some View {
         if let source = sources.first, sources.count == 1 {
             TripsTodayFocusCard(
-                source: source, title: "Happening now", snapshot: snapshot, zone: zone,
+                source: source, title: "Now", snapshot: snapshot, zone: zone,
                 isCurrent: true)
         } else if !sources.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {

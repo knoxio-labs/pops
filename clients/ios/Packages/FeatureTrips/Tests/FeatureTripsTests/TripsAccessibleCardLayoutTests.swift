@@ -39,6 +39,20 @@ internal struct TripsAccessibleCardLayoutTests {
         try expectFullWidthTitleDelta(longHeight - shortHeight)
     }
 
+    @Test("the Today focus card gives a long source title room to wrap")
+    internal func focusTitleWraps() throws {
+        let snapshot = try TripTestSources.snapshot()
+        let long = try source(named: longTitle)
+        let short = try source(named: shortTitle)
+        let longHeight = try height(
+            TripsTodayFocusCard(
+                source: long, title: "Now", snapshot: snapshot, zone: .gmt, isCurrent: true))
+        let shortHeight = try height(
+            TripsTodayFocusCard(
+                source: short, title: "Now", snapshot: snapshot, zone: .gmt, isCurrent: true))
+        #expect(longHeight > shortHeight)
+    }
+
     @Test(
         "accessible date and IANA zone each retain their full wrapped text height",
         .comparisonSurvivesAnUncompiledCatalog)
