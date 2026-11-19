@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { ContactsHostCapability } from '@pops/pillar-sdk';
+import type { ContactReferenceReadResult, ContactsHostCapability } from '@pops/pillar-sdk';
 
 import type { ResponsibilityLabels } from '../arrangements/responsibility-context';
 import type { ArrangementResponsibility, Rental } from '../arrangements/types';
@@ -54,6 +54,11 @@ export interface WorkspaceJourneyVisibility {
   hiddenJourneyIds: ReadonlySet<number>;
   onJourneyVisibilityChange: (journeyId: number, visible: boolean) => void;
 }
+/** One owner-issued Contact read shared by the Sheet, people panel, and search projection. */
+export type WorkspaceContactReferenceRead =
+  | { status: 'pending' }
+  | { status: 'error' }
+  | { status: 'resolved'; result: ContactReferenceReadResult };
 /** Independently available collections; undefined never means an empty successful read. */
 export interface OverviewSources {
   visits?: Visit[];
@@ -173,4 +178,6 @@ export type OverviewViewProps = TripOverviewProps & {
   workspaceFilter?: OverviewFilter;
   workspaceQuery?: string;
   workspaceContactNames?: ReadonlyMap<string, string>;
+  /** Shared source reads avoid re-fetching Contact display facts in every row and panel. */
+  workspaceContactReferences?: ReadonlyMap<string, WorkspaceContactReferenceRead>;
 };

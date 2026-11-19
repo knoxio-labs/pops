@@ -1,11 +1,12 @@
 import { UserRound } from 'lucide-react';
 
-import { ContactReference } from '../arrangements/ContactReference';
+import { ContactReference, ContactReferenceValue } from '../arrangements/ContactReference';
 import { workspacePeople } from './workspace-people-model';
 
 import type { JSX } from 'react';
 
-import type { OverviewViewProps } from './types';
+import type { ArrangementResponsibilityContext } from '../arrangements/responsibility-context';
+import type { OverviewViewProps, WorkspaceContactReferenceRead } from './types';
 
 /** Show only people explicitly attached to meeting plans or arrangement responsibility. */
 export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
@@ -19,7 +20,7 @@ export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
   } else if (people.length === 0) {
     statusMessage = props.labels.status('workspace.noLinkedPeople');
   }
-  const context = {
+  const context: ArrangementResponsibilityContext = {
     tripId: props.tripId,
     client: props.client,
     contacts: props.responsibility?.contacts,
@@ -36,25 +37,53 @@ export function WorkspacePeople(props: OverviewViewProps): JSX.Element {
       ) : (
         <ul className="mt-3 divide-y divide-trip-line">
           {people.map((person) => (
-            <li
+            <WorkspacePersonRow
               key={person.uri}
-              className="flex min-w-0 items-start gap-3 py-3 first:pt-0 last:pb-0"
-            >
-              <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-trip-experience-soft text-trip-experience">
-                <UserRound className="size-4" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <ContactReference identity={context} uri={person.uri} interactive />
-                {person.contexts.length > 0 && (
-                  <p className="break-words text-xs leading-relaxed text-trip-muted">
-                    {person.contexts.join(' · ')}
-                  </p>
-                )}
-              </div>
-            </li>
+              uri={person.uri}
+              contexts={person.contexts}
+              identity={context}
+              read={props.workspaceContactReferences?.get(person.uri)}
+            />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function WorkspacePersonRow({
+  uri,
+  contexts,
+  identity,
+  read,
+}: {
+  uri: string;
+  contexts: string[];
+  identity: ArrangementResponsibilityContext;
+  read: WorkspaceContactReferenceRead | undefined;
+}): JSX.Element {
+  return (
+    <li className="flex min-w-0 items-start gap-3 py-3 first:pt-0 last:pb-0">
+      <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-trip-experience-soft text-trip-experience">
+        <UserRound className="size-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        {read ? (
+          <ContactReferenceValue
+            identity={identity}
+            result={read.status === 'resolved' ? read.result : undefined}
+            readError={read.status === 'error'}
+            interactive
+          />
+        ) : (
+          <ContactReference identity={identity} uri={uri} interactive />
+        )}
+        {contexts.length > 0 && (
+          <p className="break-words text-xs leading-relaxed text-trip-muted">
+            {contexts.join(' · ')}
+          </p>
+        )}
+      </div>
+    </li>
   );
 }

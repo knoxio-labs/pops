@@ -22,8 +22,30 @@ export function ContactReference({
 }): JSX.Element {
   const reader = identity.contacts?.readContactReference;
   const query = useQuery(contactReferenceQueryOptions(identity, uri));
-  if (query.isError) return <span>{identity.labels.contactReadError}</span>;
   const result = reader ? query.data : undefined;
+  return (
+    <ContactReferenceValue
+      identity={identity}
+      result={result}
+      readError={query.isError}
+      interactive={interactive}
+    />
+  );
+}
+
+/** Render an owner-issued Contact read without issuing another read from a workspace row. */
+export function ContactReferenceValue({
+  identity,
+  result,
+  readError = false,
+  interactive = false,
+}: {
+  identity: ArrangementResponsibilityContext;
+  result?: ContactReferenceReadResult;
+  readError?: boolean;
+  interactive?: boolean;
+}): JSX.Element {
+  if (readError) return <span>{identity.labels.contactReadError}</span>;
   if (result?.status === 'available')
     return interactive ? (
       <Button asChild variant="link" className="min-h-11 h-auto whitespace-normal p-0 text-left">

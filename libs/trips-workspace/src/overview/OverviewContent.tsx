@@ -16,7 +16,12 @@ import { WorkspacePeople } from './WorkspacePeople';
 
 import type { JSX } from 'react';
 
-import type { OverviewDisplay, OverviewFilter, OverviewViewProps } from './types';
+import type {
+  OverviewDisplay,
+  OverviewFilter,
+  OverviewViewProps,
+  WorkspaceContactReferenceRead,
+} from './types';
 
 /** Present one searchable, filterable workspace around the selected Trip's canonical Timeline. */
 export function OverviewContent(props: OverviewViewProps): JSX.Element {
@@ -37,12 +42,19 @@ export function OverviewContent(props: OverviewViewProps): JSX.Element {
     ),
   });
   const workspaceContactNames = new Map<string, string>();
+  const workspaceContactReferences = new Map<string, WorkspaceContactReferenceRead>();
   for (const [index, person] of people.entries()) {
-    const result = contactReads[index]?.data;
+    const contactRead = contactReads[index];
+    if (!contactRead) continue;
+    const result = contactRead.data;
+    let reference: WorkspaceContactReferenceRead = { status: 'pending' };
+    if (contactRead.isError) reference = { status: 'error' };
+    else if (result) reference = { status: 'resolved', result };
+    workspaceContactReferences.set(person.uri, reference);
     if (result?.status === 'available') workspaceContactNames.set(person.uri, result.name);
   }
   const workspaceProps = workspaceViewProps(
-    { ...props, workspaceContactNames },
+    { ...props, workspaceContactNames, workspaceContactReferences },
     query,
     display,
     filter
